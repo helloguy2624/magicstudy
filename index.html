@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MagicStudy — Personal Study OS</title>
+  <title>MagicStudy — Web học tập - mlinh</title>
 
   <!-- Firebase Compat CDN v9.22.1 -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
   <style>
     :root{
       --primary:#EC4899;
@@ -893,21 +894,34 @@ const firebaseConfig = {
 
     let firebaseReady = false;
     let firebaseInitError = null;
+    let firebaseApp = null;
     let auth = null;
     let db = null;
     let unsubscribeAuth = null;
 
     if (FirebaseConfigured && window.firebase) {
       try {
-        firebase.initializeApp(firebaseConfig);
-        auth = firebase.auth();
-        db = firebase.firestore();
+        // Reuse the already initialized default Firebase app when present.
+        // This avoids creating a second Firebase app and keeps one shared Auth instance.
+        firebaseApp = (Array.isArray(firebase.apps) && firebase.apps.length)
+          ? firebase.app()
+          : firebase.initializeApp(firebaseConfig);
+
+        // Firebase Compat exposes Auth/Firestore services from the FirebaseApp instance.
+        // Other modules must use the shared `auth` object below, especially auth.currentUser.
+        auth = firebaseApp.auth();
+        db = firebaseApp.firestore();
         try {
           db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
         } catch (_) {}
-        firebaseReady = true;
+        firebaseReady = !!(auth && db);
+        if(!firebaseReady) throw new Error("Firebase Auth/Firestore instance không khả dụng.");
       } catch (err) {
         firebaseInitError = err;
+        firebaseReady = false;
+        firebaseApp = null;
+        auth = null;
+        db = null;
         if(APP_CONFIG.development) console.error("Firebase init failed:", err);
       }
     }
@@ -966,7 +980,7 @@ const firebaseConfig = {
     const $ = (s, root=document) => root.querySelector(s);
     const $$ = (s, root=document) => [...root.querySelectorAll(s)];
     const el = id => document.getElementById(id);
-    const uid = () => state.user?.uid || "offline_guest";
+    const uid = () => auth?.currentUser?.uid || state.user?.uid || "offline_guest";
     const localPrefix = () => `user_${uid()}_`;
 
     function escapeHTML(value="") {
@@ -1331,6 +1345,7 @@ const firebaseConfig = {
     function hideUsernameSetup(){ const modal=el("usernameSetupModal"); modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
 
     async function ensureUsername(){
+      if(firebaseReady && auth?.currentUser) state.user=auth.currentUser;
       state.profile=normalizeProfile(state.profile);
       if(!state.profile.username){ showUsernameSetup(); return false; }
       syncLocalPublicUser(); return true;
@@ -1356,11 +1371,13 @@ const firebaseConfig = {
       el("globalSearch").value=""; el("notesSearch").value=""; hideUsernameSetup(); el("notificationPop").classList.remove("show"); clearChatUI(); showAuth();
     }
 
-    if(firebaseReady){
+    if(firebaseReady && auth){
       unsubscribeAuth=auth.onAuthStateChanged(async user=>{
         try{
-          if(user){ state.user=user; await enterApp(); }
-          else clearUIForLogout();
+          if(user){
+            state.user=user;
+            await enterApp();
+          }else clearUIForLogout();
         }catch(err){ logFirebaseError("auth-state",err); toast(err.message||"Không thể tải tài khoản."); }
       });
     }else showAuth();
@@ -1412,7 +1429,7 @@ const firebaseConfig = {
        conversations/{conversationId}/messages/{messageId}
        ========================================================= */
     function socialFirebaseAvailable(){
-      return !!(firebaseReady && db && state.user);
+      return !!(firebaseReady && db && auth?.currentUser && state.user && state.user.uid===auth.currentUser.uid);
     }
 
     function firebaseSocialErrorMessage(scope,err){
@@ -1551,7 +1568,8 @@ const firebaseConfig = {
     }
 
     async function sendFriendRequest(target){
-      if(!state.user)throw new Error("Bạn cần đăng nhập.");
+      if(!auth?.currentUser && !state.user)throw new Error("Bạn cần đăng nhập.");
+      if(auth?.currentUser) state.user=auth.currentUser;
       if(!target?.uid||target.uid===uid())return toast("Bạn không thể kết bạn với chính mình.");
       if(state.profile.username===target.username)throw new Error("Bạn không thể kết bạn với chính mình.");
 
