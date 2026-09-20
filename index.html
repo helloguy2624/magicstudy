@@ -1,0 +1,3128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MagicStudy — Personal Study OS</title>
+
+  <!-- Firebase Compat CDN v9.22.1 -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <style>
+    :root{
+      --primary:#EC4899;
+      --primary-soft:#F472B6;
+      --primary-pale:#FCE7F3;
+      --bg:#FAFAFA;
+      --surface:#FFFFFF;
+      --surface-2:#F8FAFC;
+      --text:#0F172A;
+      --muted:#64748B;
+      --border:#E2E8F0;
+      --sidebar:#0F172A;
+      --sidebar-text:#CBD5E1;
+      --success:#0D9488;
+      --success-soft:#CCFBF1;
+      --warning:#F59E0B;
+      --warning-soft:#FEF3C7;
+      --danger:#EF4444;
+      --danger-soft:#FEE2E2;
+      --violet:#8B5CF6;
+      --shadow:0 12px 30px rgba(15,23,42,.08);
+      --radius:18px;
+      --topbar-h:68px;
+      --sidebar-w:254px;
+      --transition:.22s ease;
+    }
+    body.dark{
+      --bg:#0B1120;
+      --surface:#111827;
+      --surface-2:#172033;
+      --text:#F8FAFC;
+      --muted:#94A3B8;
+      --border:#263247;
+      --sidebar:#090F1B;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    button,input,textarea,select{font:inherit}
+    button{cursor:pointer}
+    a{color:inherit}
+    ::-webkit-scrollbar{width:8px;height:8px}
+    ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:99px}
+    body.dark ::-webkit-scrollbar-thumb{background:#334155}
+
+    /* AUTH */
+    #authScreen{min-height:100vh;display:grid;place-items:center;padding:24px;background:
+      radial-gradient(circle at 15% 15%, rgba(236,72,153,.16), transparent 30%),
+      radial-gradient(circle at 90% 85%, rgba(139,92,246,.16), transparent 32%),
+      var(--bg)}
+    .auth-wrap{width:min(100%,430px)}
+    .brand-lockup{display:flex;align-items:center;gap:12px;margin-bottom:22px;justify-content:center}
+    .brand-mark{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--primary),var(--violet));display:grid;place-items:center;color:white;font-weight:900;box-shadow:0 12px 25px rgba(139,92,246,.25)}
+    .brand-name{font-weight:900;font-size:27px;letter-spacing:-.8px}
+    .auth-card{background:rgba(255,255,255,.88);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.65);border-radius:28px;padding:28px;box-shadow:0 25px 60px rgba(15,23,42,.16)}
+    body.dark .auth-card{background:rgba(17,24,39,.92);border-color:#253047}
+    .auth-card h1{margin:0 0 8px;font-size:26px}
+    .auth-card p{color:var(--muted);margin:0 0 22px}
+    .auth-tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:12px;padding:4px;margin-bottom:18px}
+    .auth-tabs button{border:0;background:transparent;padding:10px;border-radius:9px;color:var(--muted);font-weight:800}
+    .auth-tabs button.active{background:var(--surface);color:var(--primary);box-shadow:0 2px 8px rgba(15,23,42,.08)}
+    .field{display:flex;flex-direction:column;gap:7px;margin-bottom:13px}
+    .field label{font-size:13px;font-weight:800;color:var(--muted)}
+    .field input,.field textarea,.field select,.search-input{width:100%;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:11px 12px;outline:none;transition:var(--transition)}
+    .field textarea{min-height:95px;resize:vertical}
+    .field input:focus,.field textarea:focus,.field select:focus,.search-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(236,72,153,.12)}
+    .btn{border:1px solid var(--border);background:var(--surface);color:var(--text);padding:10px 14px;border-radius:12px;font-weight:800;transition:var(--transition);display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    .btn:hover{transform:translateY(-1px);border-color:#CBD5E1}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--violet));color:#fff;border-color:transparent}
+    .btn-success{background:var(--success);color:#fff;border-color:transparent}
+    .btn-danger{background:var(--danger);color:#fff;border-color:transparent}
+    .btn-ghost{background:transparent}
+    .btn-sm{padding:7px 10px;border-radius:10px;font-size:12px}
+    .auth-btn{width:100%;margin-top:7px}
+    .auth-note{font-size:12px;color:var(--muted);text-align:center;margin-top:13px;line-height:1.5}
+    .mode-badge{display:inline-flex;align-items:center;gap:7px;background:var(--surface-2);border:1px solid var(--border);padding:6px 9px;border-radius:999px;font-size:11px;font-weight:800;color:var(--muted)}
+
+    /* APP SHELL */
+    #appScreen{display:none;min-height:100vh}
+    .app-shell{min-height:100vh;display:grid;grid-template-columns:var(--sidebar-w) 1fr}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);background:var(--sidebar);color:white;padding:18px 14px;display:flex;flex-direction:column;z-index:30}
+    .sidebar-brand{display:flex;align-items:center;gap:10px;padding:7px 10px 18px}
+    .sidebar-brand .brand-mark{width:38px;height:38px;border-radius:12px;font-size:14px}
+    .sidebar-brand .brand-name{font-size:20px}
+    .user-mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:15px;padding:10px;display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .avatar{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--violet));color:white;font-weight:900;overflow:hidden;flex:0 0 auto}
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    .user-mini b{font-size:13px;display:block}
+    .user-mini span{font-size:11px;color:#94A3B8;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px}
+    .nav{display:flex;flex-direction:column;gap:4px;overflow:auto}
+    .nav-section{color:#64748B;font-size:10px;font-weight:900;letter-spacing:1px;padding:12px 10px 5px;text-transform:uppercase}
+    .nav-btn{border:0;background:transparent;color:var(--sidebar-text);display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;text-align:left;font-weight:750;width:100%;font-size:13px}
+    .nav-btn:hover{background:rgba(255,255,255,.06);color:#fff}
+    .nav-btn.active{background:linear-gradient(135deg,rgba(236,72,153,.22),rgba(139,92,246,.2));color:#fff}
+    .nav-ico{width:19px;text-align:center}
+    .sidebar-bottom{margin-top:auto;display:grid;gap:7px;padding-top:14px}
+    .sidebar-bottom .btn{width:100%;color:#E2E8F0;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.07)}
+    .main-wrap{grid-column:2;min-width:0}
+    .topbar{height:var(--topbar-h);position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:0 22px;background:rgba(250,250,250,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+    body.dark .topbar{background:rgba(11,17,32,.88)}
+    .mobile-menu{display:none}
+    .topbar-title{font-weight:900;font-size:18px;white-space:nowrap}
+    .topbar-spacer{flex:1}
+    .search-wrap{width:min(380px,45vw);position:relative}
+    .search-wrap .search-input{padding-left:37px}
+    .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+    .top-actions{display:flex;align-items:center;gap:8px}
+    .icon-btn{width:39px;height:39px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:12px;display:grid;place-items:center;position:relative}
+    .notif-dot{position:absolute;right:6px;top:5px;width:7px;height:7px;border-radius:50%;background:var(--danger)}
+    .content{padding:22px;max-width:1600px;margin:auto}
+    .view{display:none}
+    .view.active{display:block}
+    .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px}
+    .page-head h2{margin:0;font-size:27px;letter-spacing:-.7px}
+    .page-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+    .page-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .grid{display:grid;gap:14px}
+    .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .stat{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:112px}
+    .stat .ico{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:var(--primary-pale);color:var(--primary);font-weight:900}
+    .stat .value{font-size:28px;font-weight:950;letter-spacing:-1px;margin-top:2px}
+    .muted{color:var(--muted)}
+    .tiny{font-size:11px}
+    .section-title{font-weight:900;font-size:15px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .section-title > span{display:flex;align-items:center;gap:8px}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .item{border:1px solid var(--border);border-radius:13px;padding:11px 12px;display:flex;align-items:center;gap:11px}
+    .item-main{flex:1;min-width:0}
+    .item-title{font-weight:850;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .item-sub{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.45}
+    .item-actions{display:flex;gap:5px;flex-wrap:wrap}
+    .empty{padding:28px 14px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:13px}
+    .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:900;white-space:nowrap}
+    .badge-pink{background:var(--primary-pale);color:#BE185D}
+    .badge-green{background:var(--success-soft);color:#0F766E}
+    .badge-yellow{background:var(--warning-soft);color:#A16207}
+    .badge-red{background:var(--danger-soft);color:#B91C1C}
+    .badge-violet{background:#EDE9FE;color:#6D28D9}
+    .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .filters select,.filters input{min-width:140px;flex:1;max-width:220px}
+    .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px}
+    table{width:100%;border-collapse:collapse;min-width:720px}
+    th,td{padding:10px 11px;border-bottom:1px solid var(--border);text-align:left;font-size:12px}
+    th{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);background:var(--surface-2)}
+    tr:last-child td{border-bottom:0}
+    .progress{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+    .progress > i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--violet))}
+    .subject-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:0 0 auto}
+    .two-col{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+    .timeline{display:grid;gap:9px}
+    .timeline-row{display:grid;grid-template-columns:82px 1fr;gap:10px}
+    .time-label{font-size:11px;color:var(--muted);font-weight:800;padding-top:11px;text-align:right}
+    .calendar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .calendar-controls{display:flex;gap:6px}
+    .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--border);border-left:1px solid var(--border);overflow:hidden;border-radius:12px}
+    .weekday,.day-cell{min-width:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+    .weekday{padding:9px;text-align:center;background:var(--surface-2);font-size:10px;font-weight:900;color:var(--muted)}
+    .day-cell{min-height:118px;padding:8px;cursor:pointer;transition:var(--transition)}
+    .day-cell:hover{background:var(--surface-2)}
+    .day-cell.today{box-shadow:inset 0 0 0 2px var(--primary)}
+    .day-num{font-size:11px;font-weight:900;margin-bottom:6px}
+    .day-events{display:grid;gap:4px}
+    .cal-event{font-size:9px;font-weight:800;padding:4px 5px;border-radius:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .schedule-week{display:grid;grid-template-columns:repeat(7,minmax(125px,1fr));gap:8px;overflow:auto;padding-bottom:5px}
+    .day-column{background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:10px;min-height:420px}
+    .day-column h4{margin:0 0 10px;font-size:12px}
+    .schedule-block{border-left:4px solid var(--primary);padding:9px;background:var(--surface-2);border-radius:9px;margin-bottom:7px}
+    .schedule-block b{font-size:12px}.schedule-block small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+    .focus-wrap{display:grid;place-items:center;padding:12px 0}
+    .timer{font-size:64px;font-weight:950;letter-spacing:-3px;line-height:1}
+    .timer-mode{color:var(--muted);font-weight:800;font-size:13px;margin:8px 0 18px}
+    .timer-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    .ring{width:220px;height:220px;border-radius:50%;display:grid;place-items:center;margin:2px auto 16px;background:conic-gradient(var(--primary) var(--pct), var(--surface-2) 0)}
+    .ring::before{content:"";width:186px;height:186px;border-radius:50%;background:var(--surface);position:absolute}
+    .ring .ring-inner{position:relative;z-index:1;display:grid;place-items:center}
+    .bars{display:grid;gap:8px}
+    .bar-row{display:grid;grid-template-columns:100px 1fr 48px;gap:8px;align-items:center}
+    .bar-row span{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .bar-track{height:10px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--violet))}
+    .bar-val{text-align:right;font-size:11px;font-weight:900}
+    .note-card{position:relative}
+    .pin{position:absolute;top:12px;right:12px}
+    .notification-pop{position:fixed;right:18px;top:80px;width:min(360px,calc(100vw - 36px));background:var(--surface);border:1px solid var(--border);box-shadow:0 20px 50px rgba(15,23,42,.18);border-radius:15px;z-index:60;padding:12px;display:none}
+    .notification-pop.show{display:block}
+    .notif-list{max-height:50vh;overflow:auto;display:grid;gap:7px}
+    .settings-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)}
+    .settings-row:last-child{border-bottom:0}
+    .switch{position:relative;width:46px;height:27px}
+    .switch input{opacity:0;width:0;height:0}
+    .slider{position:absolute;inset:0;border-radius:99px;background:#CBD5E1;transition:var(--transition)}
+    .slider:before{content:"";position:absolute;width:21px;height:21px;left:3px;top:3px;border-radius:50%;background:#fff;transition:var(--transition);box-shadow:0 2px 5px rgba(0,0,0,.18)}
+    .switch input:checked + .slider{background:var(--primary)}
+    .switch input:checked + .slider:before{transform:translateX(19px)}
+    .mobile-bottom{display:none}
+    .toast{position:fixed;bottom:20px;right:20px;z-index:100;background:var(--sidebar);color:#fff;padding:11px 14px;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.24);font-size:12px;font-weight:800;max-width:min(360px,calc(100vw - 40px))}
+    .toast.hide{display:none}
+
+    /* MODAL */
+    .modal{position:fixed;inset:0;background:rgba(2,6,23,.52);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:16px;z-index:80}
+    .modal.show{display:flex}
+    .modal-card{width:min(100%,620px);max-height:92vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:0 30px 70px rgba(2,6,23,.28)}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px;border-bottom:1px solid var(--border)}
+    .modal-head h3{margin:0;font-size:17px}
+    .modal-body{padding:16px}
+    .modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:14px 16px;border-top:1px solid var(--border)}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .span-2{grid-column:span 2}
+    .inline{display:flex;gap:8px;align-items:center}
+    .help-box{padding:11px 12px;border-radius:12px;background:var(--primary-pale);color:#9D174D;font-size:12px;line-height:1.5}
+    body.dark .help-box{color:#FCE7F3}
+    .danger-zone{border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.05);border-radius:14px;padding:14px}
+    .share-code{font-size:24px;letter-spacing:4px;font-weight:950;text-align:center;padding:12px;border:2px dashed var(--primary-soft);border-radius:14px;background:var(--primary-pale);color:#9D174D}
+
+    @media (max-width: 1050px){
+      :root{--sidebar-w:220px}
+      .grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .two-col{grid-template-columns:1fr}
+    }
+    @media (max-width: 820px){
+      .app-shell{grid-template-columns:1fr}
+      .sidebar{display:none}
+      .main-wrap{grid-column:1}
+      .topbar{padding:0 12px}
+      .mobile-menu{display:grid}
+      .search-wrap{width:auto;flex:1}
+      .topbar-title{display:none}
+      .content{padding:14px 12px 94px}
+      .mobile-bottom{display:flex;position:fixed;left:10px;right:10px;bottom:9px;height:66px;background:rgba(15,23,42,.94);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08);border-radius:18px;z-index:40;padding:7px;gap:3px;box-shadow:0 15px 35px rgba(0,0,0,.28)}
+      .mobile-nav-btn{border:0;background:transparent;color:#94A3B8;border-radius:12px;flex:1;min-width:0;font-size:10px;font-weight:800;display:grid;place-items:center;gap:2px}
+      .mobile-nav-btn.active{color:#fff;background:rgba(236,72,153,.22)}
+      .mobile-nav-btn span:first-child{font-size:17px}
+      .grid-3{grid-template-columns:1fr}
+      .grid-4{grid-template-columns:1fr 1fr}
+      .page-head{align-items:flex-start;flex-direction:column}
+      .page-actions{width:100%}
+      .page-actions .btn{flex:1}
+      .day-cell{min-height:90px}
+      .weekday{font-size:9px}
+      .timer{font-size:54px}
+    }
+    @media (max-width: 520px){
+      .grid-2,.grid-4{grid-template-columns:1fr}
+      .form-grid{grid-template-columns:1fr}
+      .span-2{grid-column:span 1}
+      .calendar-grid{font-size:9px}
+      .day-cell{padding:5px;min-height:78px}
+      .cal-event{font-size:8px;padding:3px 4px}
+      .auth-card{padding:20px}
+      .top-actions .icon-btn:nth-child(2){display:none}
+    }
+
+    /* =========================================================
+       MAGICSTUDY UI REFRESH — top navigation + pill filters
+       ========================================================= */
+    :root{--nav-h:72px;--motion:cubic-bezier(.2,.75,.2,1)}
+    .app-shell{display:block;min-height:100vh}
+    .sidebar{
+      position:sticky;left:auto;top:0;bottom:auto;width:100%;height:var(--nav-h);
+      padding:9px 16px;background:rgba(15,23,42,.96);backdrop-filter:blur(16px);
+      border-bottom:1px solid rgba(255,255,255,.08);flex-direction:row;align-items:center;gap:14px;
+      overflow:hidden;box-shadow:0 8px 24px rgba(2,6,23,.12)
+    }
+    body.dark .sidebar{background:rgba(7,12,22,.96)}
+    .sidebar-brand{padding:0;flex:0 0 auto}
+    .sidebar-brand .brand-name{font-size:19px;letter-spacing:-.5px}
+    .sidebar-brand .brand-mark{box-shadow:0 7px 18px rgba(139,92,246,.3)}
+    .user-mini,.sidebar-bottom{display:none}
+    .top-nav{display:flex;flex-direction:row;align-items:center;gap:5px;min-width:0;flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:2px 0}
+    .top-nav::-webkit-scrollbar{display:none}
+    .nav-section{display:none}
+    .nav-btn{
+      width:auto;flex:0 0 auto;padding:9px 11px;border:1px solid transparent;border-radius:999px;
+      gap:7px;font-size:12px;font-weight:800;white-space:nowrap;color:#CBD5E1;
+      transition:transform .18s var(--motion),background .18s var(--motion),color .18s var(--motion),border-color .18s var(--motion),box-shadow .18s var(--motion)
+    }
+    .nav-btn:hover{background:rgba(255,255,255,.08);color:#fff;transform:translateY(-1px)}
+    .nav-btn:focus-visible{outline:2px solid var(--primary-soft);outline-offset:2px}
+    .nav-btn.active{background:linear-gradient(135deg,rgba(236,72,153,.92),rgba(139,92,246,.88));color:#fff;border-color:rgba(255,255,255,.12);box-shadow:0 6px 16px rgba(236,72,153,.2)}
+    .nav-ico{width:auto;font-size:14px}
+    .main-wrap{min-width:0}
+    .topbar{height:62px;top:var(--nav-h);padding:0 18px;box-shadow:0 1px 0 rgba(15,23,42,.02)}
+    .mobile-menu{display:none!important}
+    .topbar-title{font-size:16px}
+    .icon-btn,.btn{transition:transform .18s var(--motion),box-shadow .18s var(--motion),border-color .18s var(--motion),background .18s var(--motion)}
+    .btn:hover,.icon-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(15,23,42,.08)}
+    .btn:active,.icon-btn:active{transform:translateY(0)}
+    .btn:focus-visible,.icon-btn:focus-visible{outline:2px solid var(--primary-soft);outline-offset:2px}
+    .btn-primary{box-shadow:0 7px 18px rgba(236,72,153,.18)}
+    .icon-btn{min-width:40px;min-height:40px}
+    .card{transition:box-shadow .18s var(--motion),transform .18s var(--motion),border-color .18s var(--motion)}
+    .card:hover{box-shadow:0 16px 34px rgba(15,23,42,.09)}
+    .filters{align-items:center;gap:10px}
+    .filters select,.filters input{
+      min-width:150px;max-width:235px;flex:0 1 auto;height:42px;padding:0 36px 0 13px;
+      appearance:none;border:1px solid var(--border);border-radius:999px;background-color:var(--surface);color:var(--text);
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 13px center;box-shadow:0 3px 10px rgba(15,23,42,.03);
+      transition:border-color .18s var(--motion),box-shadow .18s var(--motion),transform .18s var(--motion)
+    }
+    .filters select:hover{border-color:var(--primary-soft);transform:translateY(-1px)}
+    .filters select:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(236,72,153,.10);outline:none}
+    .search-input{transition:border-color .18s var(--motion),box-shadow .18s var(--motion)}
+    .item{transition:border-color .18s var(--motion),background .18s var(--motion),transform .18s var(--motion)}
+    .item:hover{border-color:rgba(236,72,153,.25);background:var(--surface-2)}
+    .page-head h2{letter-spacing:-.9px}
+    .page-actions .btn-primary{background:linear-gradient(135deg,var(--primary),var(--violet))}
+    .mobile-bottom{display:none!important}
+    .notification-pop{top:calc(var(--nav-h) + 72px)}
+
+    @media (max-width:820px){
+      :root{--nav-h:64px}
+      .sidebar{height:var(--nav-h);padding:8px 10px;gap:9px}
+      .sidebar-brand .brand-mark{width:34px;height:34px;border-radius:11px}
+      .sidebar-brand .brand-name{font-size:17px}
+      .top-nav{gap:3px}
+      .nav-btn{padding:8px 9px;font-size:11px}
+      .nav-ico{font-size:13px}
+      .topbar{top:var(--nav-h);height:58px;padding:0 10px}
+      .topbar-title{display:none}
+      .search-wrap{min-width:0;max-width:none;width:auto;flex:1}
+      .top-actions{gap:6px}
+      .filters{display:flex;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;scrollbar-width:none}
+      .filters::-webkit-scrollbar{display:none}
+      .filters select,.filters input{min-width:142px;max-width:none;flex:0 0 auto}
+      .content{padding-top:14px}
+    }
+    @media (max-width:520px){
+      .sidebar{padding-left:8px;padding-right:8px}
+      .sidebar-brand .brand-name{display:none}
+      .nav-btn{padding:8px 9px}
+      .nav-btn .nav-ico{margin-right:0}
+      .topbar{padding:0 8px}
+      .top-actions .icon-btn{width:40px;height:40px}
+      .top-actions .icon-btn:nth-child(2){display:grid}
+      .filters select,.filters input{height:40px;min-width:138px;font-size:12px}
+    }
+
+
+    /* =========================================================
+       MAGICSTUDY SOCIAL / ACCESSIBILITY REFRESH
+       ========================================================= */
+    .username-edit-row{display:flex;align-items:stretch}
+    .username-prefix{display:grid;place-items:center;padding:0 12px;border:1px solid var(--border);border-right:0;border-radius:12px 0 0 12px;background:var(--surface-2);color:var(--muted);font-weight:900}
+    .username-edit-row input{border-radius:0 12px 12px 0!important}
+    .rounded-select{height:42px;padding:0 34px 0 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);outline:none}
+    .social-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px;border-radius:14px;background:var(--surface-2);border:1px solid var(--border);margin-bottom:14px;scrollbar-width:none}
+    .social-tabs::-webkit-scrollbar{display:none}
+    .social-tab{min-height:40px;border:1px solid transparent;background:transparent;color:var(--muted);padding:8px 13px;border-radius:10px;font-weight:850;white-space:nowrap;transition:var(--transition)}
+    .social-tab:hover{color:var(--text);background:var(--surface);transform:translateY(-1px)}
+    .social-tab.active{background:var(--surface);border-color:var(--border);color:var(--primary);box-shadow:0 4px 12px rgba(15,23,42,.05)}
+    .tab-badge{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--primary);color:#fff;font-size:10px;margin-left:5px}
+    .social-panel{display:none}.social-panel.active{display:block}
+    .social-search-row{display:flex;gap:8px;align-items:center}.social-search-row .btn{min-height:42px}
+    .username-search-wrap{display:flex;align-items:center;gap:0;flex:1}.username-search-wrap>span{height:42px;display:grid;place-items:center;padding:0 11px;border:1px solid var(--border);border-right:0;border-radius:12px 0 0 12px;background:var(--surface-2);font-weight:900;color:var(--muted)}
+    .username-search-wrap .search-input{height:42px;border-radius:0 12px 12px 0}
+    .share-import-row{display:flex;gap:8px;margin-top:10px}.share-import-row .search-input{min-width:0}
+    .social-user{display:flex;align-items:center;gap:10px;min-width:0}.social-user .avatar{width:42px;height:42px;border-radius:12px}.social-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .chat-layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:12px;min-height:520px}
+    .chat-people,.chat-panel{border:1px solid var(--border);border-radius:15px;background:var(--surface);min-width:0}
+    .chat-people{padding:12px;display:flex;flex-direction:column}.chat-people-list{overflow:auto;min-height:0}.chat-person{cursor:pointer}.chat-person.active{border-color:rgba(236,72,153,.4);background:var(--primary-pale)}
+    .chat-panel{display:flex;min-height:520px}.chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:100%;width:100%;text-align:center;padding:30px}.chat-empty-icon{font-size:34px;margin-bottom:5px}
+    .chat-active{display:flex;flex-direction:column;min-width:0;width:100%;height:100%}.chat-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--border)}
+    .chat-user{display:flex;align-items:center;gap:10px;min-width:0}.chat-messages{flex:1;min-height:0;max-height:390px;overflow-y:auto;padding:14px;background:linear-gradient(180deg,var(--surface),var(--surface-2));display:flex;flex-direction:column;gap:8px}
+    .chat-bubble-row{display:flex;width:100%}.chat-bubble-row.mine{justify-content:flex-end}.chat-bubble{max-width:min(76%,520px);padding:9px 11px;border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:0 2px 8px rgba(15,23,42,.04)}.chat-bubble.mine{background:var(--primary-pale);border-color:rgba(236,72,153,.18)}
+    .chat-text{font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}.chat-meta{font-size:9px;color:var(--muted);margin-top:5px}.chat-compose{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;padding:10px;border-top:1px solid var(--border)}.chat-compose textarea{width:100%;min-height:42px;max-height:120px;resize:none;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);outline:none}.chat-compose textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(236,72,153,.12)}.chat-send{width:44px;height:44px;padding:0}.chat-hint{padding:0 10px 10px}
+    .form-error{padding:10px 12px;border-radius:12px;background:var(--danger-soft);color:#B91C1C;font-size:12px;line-height:1.45}
+    .username-setup-modal{z-index:120}.username-setup-card{width:min(100%,520px)}
+    .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--muted)}
+    .status-dot.success{background:var(--success)}
+    .status-dot.warn{background:var(--warning)}
+    .status-dot.danger{background:var(--danger)}
+    @media (max-width:820px){
+      .chat-layout{grid-template-columns:1fr;min-height:0}.chat-people{max-height:230px}.chat-panel{min-height:470px}.chat-messages{max-height:none;min-height:300px}.chat-back{display:inline-flex}.social-search-row{align-items:stretch}.social-search-row .btn{flex:0 0 auto}
+    }
+    @media (max-width:520px){
+      .social-tabs{gap:5px}.social-tab{padding:8px 10px;font-size:11px}.social-actions{width:100%}.social-actions .btn{flex:1}.chat-head{align-items:flex-start}.chat-head .btn{font-size:11px}.chat-bubble{max-width:84%}.chat-compose{grid-template-columns:minmax(0,1fr) 42px}.chat-send{width:42px;height:42px}.share-import-row{flex-direction:column}.share-import-row .btn{width:100%}
+    }
+
+  </style>
+</head>
+<body>
+  <div id="authScreen">
+    <div class="auth-wrap">
+      <div class="brand-lockup">
+        <div class="brand-mark">M</div>
+        <div class="brand-name">MagicStudy</div>
+      </div>
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button id="tabLogin" class="active" type="button">Đăng nhập</button>
+          <button id="tabRegister" type="button">Đăng ký</button>
+        </div>
+        <h1 id="authTitle">Chào mừng quay lại</h1>
+        <p id="authSubtitle">Đăng nhập để mở không gian học tập cá nhân.</p>
+
+        <form id="authForm">
+          <div class="field" id="authNameWrap" style="display:none">
+            <label>Họ tên</label>
+            <input id="authName" type="text" placeholder="Nguyễn Văn A" autocomplete="name">
+          </div>
+          <div class="field" id="authUsernameWrap" style="display:none">
+            <label>Username</label>
+            <input id="authUsername" type="text" inputmode="text" autocapitalize="none" autocomplete="username" placeholder="linh123">
+            <div class="muted tiny">3–20 ký tự: a–z, A–Z, 0–9 và _ · lưu thành lowercase.</div>
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
+          </div>
+          <div class="field">
+            <label>Mật khẩu</label>
+            <input id="authPassword" type="password" autocomplete="current-password" placeholder="Tối thiểu 6 ký tự" required>
+          </div>
+          <button class="btn btn-primary auth-btn" type="submit" id="authSubmit">Đăng nhập</button>
+        </form>
+
+        <div style="margin-top:14px;display:flex;justify-content:center">
+          <span class="mode-badge" id="connectionBadge">● Firebase chưa cấu hình</span>
+        </div>
+        <div class="auth-note">
+          Khi Firebase chưa được cấu hình hoặc mất mạng, MagicStudy tự chuyển sang LocalStorage fallback.
+          Dữ liệu offline được cô lập theo UID offline.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="appScreen">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="brand-mark">M</div>
+          <div class="brand-name">MagicStudy</div>
+        </div>
+        <div class="user-mini">
+          <div class="avatar" id="sideAvatar">E</div>
+          <div style="min-width:0">
+            <b id="sideName">Edu Student</b>
+            <span id="sideEmail">offline@local</span>
+          </div>
+        </div>
+
+        <nav class="nav top-nav" id="sideNav">
+          <div class="nav-section">HỌC TẬP</div>
+          <button class="nav-btn active" data-view="dashboard"><span class="nav-ico">⌂</span>Dashboard</button>
+          <button class="nav-btn" data-view="calendar"><span class="nav-ico">▣</span>Lịch / Calendar</button>
+
+          <div class="nav-section nav-section-study">HỌC TẬP</div>
+          <button class="nav-btn" data-view="schedule"><span class="nav-ico">◫</span>Thời khóa biểu</button>
+          <button class="nav-btn" data-view="tasks"><span class="nav-ico">✓</span>Bài tập</button>
+          <button class="nav-btn" data-view="exams"><span class="nav-ico">⌁</span>Bài kiểm tra</button>
+          <button class="nav-btn" data-view="grades"><span class="nav-ico">◈</span>Điểm số</button>
+          <button class="nav-btn" data-view="documents"><span class="nav-ico">▤</span>Tài liệu</button>
+          <button class="nav-btn" data-view="notes"><span class="nav-ico">✎</span>Ghi chú</button>
+
+          <div class="nav-section nav-section-study">FOCUS & MỤC TIÊU</div>
+          <button class="nav-btn" data-view="pomodoro"><span class="nav-ico">◷</span>Pomodoro</button>
+          <button class="nav-btn" data-view="goals"><span class="nav-ico">◎</span>Mục tiêu</button>
+          <button class="nav-btn" data-view="stats"><span class="nav-ico">▥</span>Thống kê</button>
+
+          <div class="nav-section nav-section-system">HỆ THỐNG</div>
+          <button class="nav-btn" data-view="settings"><span class="nav-ico">⚙</span>Cài đặt & Chia sẻ</button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <button class="btn" id="sidebarTheme">☼ Chuyển Dark / Light</button>
+          <button class="btn" id="sidebarLogout">↪ Đăng xuất</button>
+        </div>
+      </aside>
+
+      <main class="main-wrap">
+        <header class="topbar">
+          <button class="icon-btn mobile-menu" id="mobileMenuBtn" type="button">☰</button>
+          <div class="topbar-title" id="topbarTitle">Dashboard</div>
+          <div class="search-wrap">
+            <span class="search-icon">⌕</span>
+            <input class="search-input" id="globalSearch" placeholder="Tìm bài tập, tài liệu, ghi chú...">
+          </div>
+          <div class="topbar-spacer"></div>
+          <div class="top-actions">
+            <button class="icon-btn" id="notifBtn" type="button">🔔<span class="notif-dot" id="notifDot" style="display:none"></span></button>
+            <button class="icon-btn" id="quickAddBtn" type="button">＋</button>
+            <button class="icon-btn" id="themeBtn" type="button">◐</button>
+          </div>
+        </header>
+
+        <div class="notification-pop" id="notificationPop">
+          <div class="section-title"><span>🔔 Thông báo</span><button class="btn btn-sm btn-ghost" id="markNotifsRead">Đã đọc</button></div>
+          <div class="notif-list" id="notifList"></div>
+        </div>
+
+        <div class="content">
+          <!-- DASHBOARD -->
+          <section class="view active" id="view-dashboard">
+            <div class="page-head">
+              <div>
+                <h2 id="greeting">Chào buổi sáng 👋</h2>
+                <p id="todayText"></p>
+              </div>
+              <div class="page-actions">
+                <button class="btn" data-view-jump="pomodoro">◷ Focus</button>
+                <button class="btn btn-primary" data-quick-modal="task">＋ Thêm bài tập</button>
+              </div>
+            </div>
+            <div class="grid grid-4" id="dashboardStats"></div>
+            <div class="two-col" style="margin-top:14px">
+              <div class="card">
+                <div class="section-title"><span>📚 Lịch học hôm nay</span><button class="btn btn-sm" data-view-jump="schedule">Xem</button></div>
+                <div class="timeline" id="todaySchedule"></div>
+              </div>
+              <div class="card">
+                <div class="section-title"><span>📝 Việc cần làm</span><button class="btn btn-sm" data-view-jump="tasks">Xem</button></div>
+                <div class="list" id="dashboardTasks"></div>
+              </div>
+            </div>
+            <div class="grid grid-2" style="margin-top:14px">
+              <div class="card">
+                <div class="section-title"><span>⏰ Deadline gần nhất</span><button class="btn btn-sm" data-view-jump="tasks">Tất cả</button></div>
+                <div class="list" id="dashboardDeadlines"></div>
+              </div>
+              <div class="card">
+                <div class="section-title"><span>🧪 Bài kiểm tra sắp tới</span><button class="btn btn-sm" data-view-jump="exams">Tất cả</button></div>
+                <div class="list" id="dashboardExams"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- CALENDAR -->
+          <section class="view" id="view-calendar">
+            <div class="page-head">
+              <div><h2>Lịch / Calendar</h2><p>Bài tập, bài kiểm tra và lịch học theo ngày.</p></div>
+              <div class="page-actions">
+                <button class="btn btn-primary" data-view-jump="schedule">＋ Thêm lịch học</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="calendar-head">
+                <div class="inline">
+                  <button class="btn btn-sm" id="calPrev">←</button>
+                  <button class="btn btn-sm" id="calToday">Hôm nay</button>
+                  <button class="btn btn-sm" id="calNext">→</button>
+                  <b id="calMonthLabel"></b>
+                </div>
+                <div class="muted tiny">Click vào ngày để xem hoạt động</div>
+              </div>
+              <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
+          </section>
+
+          <!-- SCHEDULE -->
+          <section class="view" id="view-schedule">
+            <div class="page-head">
+              <div><h2>Thời khóa biểu</h2><p>Lịch học theo tuần, có thể thêm / sửa / xóa.</p></div>
+              <div class="page-actions"><button class="btn btn-primary" data-quick-modal="schedule">＋ Thêm lịch</button></div>
+            </div>
+            <div class="card">
+              <div class="inline" style="margin-bottom:12px">
+                <button class="btn btn-sm" id="schedulePrev">←</button>
+                <button class="btn btn-sm" id="scheduleThisWeek">Tuần này</button>
+                <button class="btn btn-sm" id="scheduleNext">→</button>
+                <span class="muted tiny" id="scheduleRange"></span>
+              </div>
+              <div class="schedule-week" id="scheduleWeek"></div>
+            </div>
+          </section>
+
+          <!-- TASKS -->
+          <section class="view" id="view-tasks">
+            <div class="page-head">
+              <div><h2>Bài tập</h2><p>Quản lý deadline và tiến độ học tập.</p></div>
+              <div class="page-actions"><button class="btn btn-primary" data-quick-modal="task">＋ Thêm bài tập</button></div>
+            </div>
+            <div class="card">
+              <div class="filters">
+                <select id="taskStatusFilter"><option value="">Mọi trạng thái</option><option>Chưa làm</option><option>Đang làm</option><option>Hoàn thành</option></select>
+                <select id="taskSubjectFilter"><option value="">Mọi môn học</option></select>
+                <select id="taskPriorityFilter"><option value="">Mọi ưu tiên</option><option>Thấp</option><option>Trung bình</option><option>Cao</option></select>
+                <select id="taskDeadlineFilter"><option value="">Mọi deadline</option><option value="overdue">Quá hạn</option><option value="7">7 ngày tới</option><option value="30">30 ngày tới</option></select>
+              </div>
+              <div class="list" id="tasksList"></div>
+            </div>
+          </section>
+
+          <!-- EXAMS -->
+          <section class="view" id="view-exams">
+            <div class="page-head">
+              <div><h2>Bài kiểm tra</h2><p>Countdown, nội dung ôn tập và phân loại kiểm tra.</p></div>
+              <div class="page-actions"><button class="btn btn-primary" data-quick-modal="exam">＋ Thêm kiểm tra</button></div>
+            </div>
+            <div class="card"><div class="list" id="examsList"></div></div>
+          </section>
+
+          <!-- GRADES -->
+          <section class="view" id="view-grades">
+            <div class="page-head">
+              <div><h2>Điểm số</h2><p>Tự động tính điểm trung bình theo môn và học kỳ.</p></div>
+              <div class="page-actions"><button class="btn btn-primary" data-quick-modal="grade">＋ Thêm điểm</button></div>
+            </div>
+            <div class="grid grid-3" id="gradeSummary" style="margin-bottom:14px"></div>
+            <div class="card"><div class="list" id="gradesList"></div></div>
+          </section>
+
+          <!-- DOCUMENTS -->
+          <section class="view" id="view-documents">
+            <div class="page-head">
+              <div><h2>Khu vực tài liệu</h2><p>Môn học riêng + sub-collection tài liệu chính xác trong từng môn.</p></div>
+              <div class="page-actions">
+                <button class="btn" data-quick-modal="material">＋ Thêm tài liệu</button>
+                <button class="btn" data-quick-modal="subject">＋ Tạo môn học</button>
+                <button class="btn btn-primary" data-quick-modal="docSubject">＋ Tạo môn tài liệu</button>
+              </div>
+            </div>
+            <div class="card" style="margin-bottom:14px">
+              <div class="section-title">
+                <span>📚 Môn học hệ thống</span>
+                <span class="muted tiny">Dùng cho bài tập, lịch học, kiểm tra, điểm, ghi chú...</span>
+              </div>
+              <div class="list" id="systemSubjectsList"></div>
+            </div>
+            <div class="grid grid-3" id="docSubjectsList"></div>
+          </section>
+
+          <!-- POMODORO -->
+          <section class="view" id="view-pomodoro">
+            <div class="page-head">
+              <div><h2>Pomodoro / Focus Mode</h2><p>Tập trung theo môn, lưu lịch sử phiên học và thống kê.</p></div>
+            </div>
+            <div class="grid grid-2">
+              <div class="card">
+                <div class="focus-wrap">
+                  <div class="ring" id="timerRing" style="--pct:100%">
+                    <div class="ring-inner">
+                      <div class="timer" id="timerText">25:00</div>
+                      <div class="timer-mode" id="timerMode">Focus</div>
+                    </div>
+                  </div>
+                  <div class="field" style="width:min(100%,340px)">
+                    <label>Môn học</label>
+                    <select id="pomodoroSubject"></select>
+                  </div>
+                  <div class="form-grid" style="width:min(100%,340px)">
+                    <div class="field"><label>Phút học</label><input id="focusMinutes" type="number" min="1" max="180" value="25"></div>
+                    <div class="field"><label>Phút nghỉ</label><input id="breakMinutes" type="number" min="1" max="60" value="5"></div>
+                  </div>
+                  <div class="timer-actions">
+                    <button class="btn btn-primary" id="timerStart">Start</button>
+                    <button class="btn" id="timerPause">Pause</button>
+                    <button class="btn" id="timerReset">Reset</button>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="section-title"><span>📈 Lịch sử phiên học</span></div>
+                <div class="grid grid-3" id="pomodoroStats"></div>
+                <div style="margin-top:13px" class="list" id="pomodoroHistory"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- GOALS -->
+          <section class="view" id="view-goals">
+            <div class="page-head">
+              <div><h2>Mục tiêu học tập</h2><p>Mục tiêu ngày / tuần / tháng với % tiến độ.</p></div>
+              <div class="page-actions"><button class="btn btn-primary" data-quick-modal="goal">＋ Thêm mục tiêu</button></div>
+            </div>
+            <div class="grid grid-3" id="goalsList"></div>
+          </section>
+
+          <!-- NOTES -->
+          <section class="view" id="view-notes">
+            <div class="page-head">
+              <div><h2>Ghi chú học tập</h2><p>Tìm kiếm, gán môn, ghim ghi chú quan trọng.</p></div>
+              <div class="page-actions"><button class="btn btn-primary" data-quick-modal="note">＋ Thêm ghi chú</button></div>
+            </div>
+            <div class="card" style="margin-bottom:14px">
+              <input class="search-input" id="notesSearch" placeholder="Tìm trong tiêu đề và nội dung...">
+            </div>
+            <div class="grid grid-3" id="notesList"></div>
+          </section>
+
+          <!-- STATS -->
+          <section class="view" id="view-stats">
+            <div class="page-head">
+              <div><h2>Thống kê học tập</h2><p>Báo cáo bài tập, điểm số và thời gian học.</p></div>
+            </div>
+            <div class="grid grid-4" id="statsCards"></div>
+            <div class="grid grid-2" style="margin-top:14px">
+              <div class="card">
+                <div class="section-title"><span>📊 Điểm trung bình theo môn</span></div>
+                <div class="bars" id="gradeBars"></div>
+              </div>
+              <div class="card">
+                <div class="section-title"><span>⏱️ Thời gian học theo môn</span></div>
+                <div class="bars" id="studyBars"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- SETTINGS -->
+          <section class="view" id="view-settings">
+            <div class="page-head">
+              <div><h2>Cài đặt</h2><p>Hồ sơ, giao diện, thông báo, chia sẻ và kết nối bạn bè trong MagicStudy.</p></div>
+            </div>
+
+            <div class="grid grid-2">
+              <div class="card">
+                <div class="section-title"><span>👤 Hồ sơ</span><span class="badge badge-pink">Theo tài khoản</span></div>
+                <form id="profileForm">
+                  <div class="field"><label>Họ tên</label><input id="profileName" required></div>
+                  <div class="field"><label>Username</label><div class="username-edit-row"><span class="username-prefix">@</span><input id="profileUsername" inputmode="text" autocapitalize="none" autocomplete="username" placeholder="linh123" required></div><div class="muted tiny">Username 3–20 ký tự, chỉ a–z / 0–9 / _. Username mới sẽ được chuẩn hóa lowercase và phải unique.</div></div>
+                  <div class="field"><label>Avatar URL</label><input id="profileAvatar" type="url" placeholder="https://..."></div>
+                  <div class="field"><label>Màu giao diện</label><input id="profileColor" type="color" value="#EC4899" style="height:43px;padding:5px"></div>
+                  <button class="btn btn-primary" type="submit">Lưu hồ sơ</button>
+                  <div class="inline" style="margin-top:8px;justify-content:space-between;flex-wrap:wrap">
+                    <span class="muted tiny">Đăng xuất khỏi tài khoản hiện tại.</span>
+                    <button class="btn btn-sm" id="settingsLogoutBtn" type="button">↪ Đăng xuất</button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="card">
+                <div class="section-title"><span>🎨 Giao diện & thông báo</span></div>
+                <div class="settings-row">
+                  <div><b>Dark Mode</b><div class="muted tiny">Lưu theo tài khoản hiện tại.</div></div>
+                  <label class="switch"><input id="darkSwitch" type="checkbox"><span class="slider"></span></label>
+                </div>
+                <div class="settings-row">
+                  <div><b>Thông báo nội bộ</b><div class="muted tiny">Deadline, kiểm tra và mục tiêu.</div></div>
+                  <label class="switch"><input id="notifSwitch" type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="settings-row">
+                  <div><b>Nhắc trước</b><div class="muted tiny">Khoảng thời gian tạo cảnh báo.</div></div>
+                  <select id="reminderMinutes" class="rounded-select" style="width:150px"><option value="15">15 phút</option><option value="60">1 giờ</option><option value="1440">1 ngày</option></select>
+                </div>
+              </div>
+
+              <div class="card span-2">
+                <div class="section-title"><span>👥 Bạn bè & nhắn tin</span><span class="badge badge-violet" id="socialSyncBadge">Firebase social</span></div>
+                <div class="social-tabs" role="tablist" aria-label="Bạn bè và nhắn tin">
+                  <button class="social-tab active" type="button" data-social-tab="friends">Bạn bè</button>
+                  <button class="social-tab" type="button" data-social-tab="requests">Lời mời <span class="tab-badge" id="friendRequestBadge" hidden>0</span></button>
+                  <button class="social-tab" type="button" data-social-tab="find">Tìm bạn</button>
+                  <button class="social-tab" type="button" data-social-tab="messages">Tin nhắn <span class="tab-badge" id="messageBadge" hidden>0</span></button>
+                </div>
+
+                <div class="social-panel active" id="socialPanel-friends">
+                  <div class="section-title"><span>Danh sách bạn bè</span><span class="muted tiny" id="friendsCount"></span></div>
+                  <div class="list" id="friendsList"></div>
+                </div>
+
+                <div class="social-panel" id="socialPanel-requests">
+                  <div class="grid grid-2">
+                    <div>
+                      <div class="section-title"><span>📥 Lời mời nhận được</span></div>
+                      <div class="list" id="incomingRequests"></div>
+                    </div>
+                    <div>
+                      <div class="section-title"><span>📤 Lời mời đã gửi</span></div>
+                      <div class="list" id="outgoingRequests"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="social-panel" id="socialPanel-find">
+                  <div class="social-search-row">
+                    <div class="username-search-wrap"><span>@</span><input class="search-input" id="usernameSearch" inputmode="text" autocapitalize="none" placeholder="username"></div>
+                    <button class="btn btn-primary" id="usernameSearchBtn" type="button">Tìm</button>
+                  </div>
+                  <div id="usernameSearchResult" style="margin-top:12px"></div>
+                </div>
+
+                <div class="social-panel" id="socialPanel-messages">
+                  <div class="chat-layout">
+                    <div class="chat-people">
+                      <div class="section-title"><span>Cuộc trò chuyện</span><span class="muted tiny" id="conversationCount"></span></div>
+                      <div class="list chat-people-list" id="chatPeopleList"></div>
+                    </div>
+                    <div class="chat-panel" id="chatPanel">
+                      <div class="chat-empty" id="chatEmpty">
+                        <div class="chat-empty-icon">💬</div>
+                        <b>Chọn một người bạn để bắt đầu</b>
+                        <span class="muted tiny">Tin nhắn 1-1 được đồng bộ realtime qua Firestore.</span>
+                      </div>
+                      <div class="chat-active" id="chatActive" hidden>
+                        <div class="chat-head">
+                          <div class="chat-user">
+                            <div class="avatar" id="chatAvatar">U</div>
+                            <div class="item-main"><div class="item-title" id="chatName">—</div><div class="item-sub" id="chatUsername">@—</div></div>
+                          </div>
+                          <button class="btn btn-sm" id="chatBackBtn" type="button">← Danh sách</button>
+                        </div>
+                        <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+                        <form class="chat-compose" id="chatForm">
+                          <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Nhập tin nhắn..." autocomplete="off"></textarea>
+                          <button class="btn btn-primary chat-send" type="submit" aria-label="Gửi tin nhắn">➤</button>
+                        </form>
+                        <div class="muted tiny chat-hint">Enter để gửi · Shift + Enter để xuống dòng · tối đa 2000 ký tự.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="section-title"><span>🔗 Chia sẻ bằng mã</span><button class="btn btn-sm" data-quick-modal="share">Tạo mã</button></div>
+                <p class="muted tiny">Chia sẻ tài liệu hoặc ghi chú bằng mã. Người nhận chỉ sao chép dữ liệu vào tài khoản của họ; dữ liệu cá nhân của bạn không được mở trực tiếp.</p>
+                <div id="myShares" class="list"></div>
+                <div class="share-import-row"><input class="search-input" id="importShareCode" maxlength="16" placeholder="Nhập mã chia sẻ"><button class="btn btn-sm" id="importShareBtn" type="button">Nhập mã</button></div>
+              </div>
+
+              <div class="card">
+                <div class="section-title"><span>🗃️ Quản lý dữ liệu</span></div>
+                <p class="muted tiny">Xóa sẽ dọn dữ liệu học tập của UID hiện tại, profile, username index và cache LocalStorage. Dữ liệu social thuộc collection root cũng được xử lý theo quyền thành viên.</p>
+                <button class="btn btn-danger" id="deleteAllBtn">Xóa toàn bộ dữ liệu tài khoản</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+  </div>
+
+  <div class="modal username-setup-modal" id="usernameSetupModal" aria-hidden="true">
+    <div class="modal-card username-setup-card">
+      <div class="modal-head"><h3>Thiết lập username</h3></div>
+      <form id="usernameSetupForm">
+        <div class="modal-body">
+          <div class="help-box"><b>Chào mừng bạn đến MagicStudy.</b><br>
+            Tài khoản này chưa có username. Hãy tạo username để tiếp tục; username phải unique và được lưu dạng lowercase.
+          </div>
+          <div class="field" style="margin-top:14px"><label>Username</label><div class="username-edit-row"><span class="username-prefix">@</span><input id="usernameSetupInput" inputmode="text" autocapitalize="none" autocomplete="username" placeholder="linh123" maxlength="20" required></div><div class="muted tiny">3–20 ký tự · chữ cái, số và dấu _. Không dùng khoảng trắng hoặc ký tự @ trong username.</div></div>
+          <div id="usernameSetupError" class="form-error" hidden></div>
+        </div>
+        <div class="modal-actions"><button class="btn btn-primary" type="submit" id="usernameSetupSave">Lưu username</button></div>
+      </form>
+    </div>
+  </div>
+  <div class="modal" id="modal">
+    <div class="modal-card">
+      <div class="modal-head"><h3 id="modalTitle">Thêm</h3><button class="icon-btn" id="modalClose">×</button></div>
+      <form id="modalForm">
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-actions">
+          <button class="btn" type="button" id="modalCancel">Hủy</button>
+          <button class="btn btn-primary" type="submit" id="modalSave">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="toast hide" id="toast"></div>
+
+  <script>
+  (() => {
+    "use strict";
+
+    /* =========================================================
+       1. FIREBASE CONFIG — GIỮ NGUYÊN CONFIG HIỆN TẠI CỦA ỨNG DỤNG
+       ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDqkkIvUBUpkZ3mcaYkvr2i1uNFWkVGMFc",
+  authDomain: "eduempire-85dfe.firebaseapp.com",
+  projectId: "eduempire-85dfe",
+  storageBucket: "eduempire-85dfe.firebasestorage.app",
+  messagingSenderId: "692759236063",
+  appId: "1:692759236063:web:b0cf166f438c80c15e486a",
+  measurementId: "G-XDQJRZL4RK"
+};
+
+    const FirebaseConfigured = !Object.values(firebaseConfig).some(v => !v || String(v).includes("YOUR_"));
+
+    const APP_CONFIG = {
+      firebaseEnabled: FirebaseConfigured,
+      firebaseReady: false,
+      appVersion: "2.0.0",
+      development: false,
+      localStoragePrefix: "magicstudy"
+    };
+
+    let firebaseReady = false;
+    let firebaseInitError = null;
+    let auth = null;
+    let db = null;
+    let unsubscribeAuth = null;
+
+    if (FirebaseConfigured && window.firebase) {
+      try {
+        firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+        try {
+          db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+        } catch (_) {}
+        firebaseReady = true;
+      } catch (err) {
+        firebaseInitError = err;
+        if(APP_CONFIG.development) console.error("Firebase init failed:", err);
+      }
+    }
+
+    /* =========================================================
+       2. APP STATE
+       ========================================================= */
+    const COLLECTIONS = [
+      "subjects","schedule","tasks","exams","grades",
+      "documentSubjects","pomodoros","studySessions",
+      "goals","notes","notifications","shares"
+    ];
+
+    const state = {
+      user: null,
+      profile: {
+        uid: "", username: "", displayName: "Edu Student", avatar: "", primaryColor: "#EC4899",
+        darkMode: false, notificationsEnabled: true, reminderMinutes: 60, createdAt: "", updatedAt: "",
+        // Legacy aliases are kept in memory so older local data remains readable.
+        name: "Edu Student", primary: "#EC4899", dark: false, notifications: true, reminder: 60
+      },
+      subjects: [],
+      schedule: [],
+      tasks: [],
+      exams: [],
+      grades: [],
+      documentSubjects: [],
+      materialsBySubject: {},
+      pomodoros: [],
+      studySessions: [],
+      goals: [],
+      notes: [],
+      notifications: [],
+      shares: [],
+      view: "dashboard",
+      calDate: new Date(),
+      scheduleWeekStart: mondayOf(new Date()),
+      modalMode: "",
+      modalEditId: null,
+      timer: {
+        running:false, mode:"Focus", remaining:25*60, total:25*60, interval:null, startedAt:null,
+        subjectId:"", focusMinutes:25, breakMinutes:5
+      },
+      social: {
+        friends: [], incomingRequests: [], outgoingRequests: [], conversations: [],
+        activeTab: "friends", activeFriend: null, activeConversationId: null, messages: [],
+        searchUser: null, unread: {}, unreadTotal: 0, listener: null, syncMode: "firebase"
+      }
+    };
+
+    APP_CONFIG.firebaseReady = firebaseReady;
+
+    /* =========================================================
+       3. DOM HELPERS
+       ========================================================= */
+    const $ = (s, root=document) => root.querySelector(s);
+    const $$ = (s, root=document) => [...root.querySelectorAll(s)];
+    const el = id => document.getElementById(id);
+    const uid = () => state.user?.uid || "offline_guest";
+    const localPrefix = () => `user_${uid()}_`;
+
+    function escapeHTML(value="") {
+      return String(value)
+        .replaceAll("&","&amp;").replaceAll("<","&lt;")
+        .replaceAll(">","&gt;").replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+    function nowISO(){ return new Date().toISOString(); }
+    function dateKey(date){ const d=new Date(date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+    function localDateTimeInputValue(date=new Date()){
+      const d = new Date(date.getTime()-date.getTimezoneOffset()*60000);
+      return d.toISOString().slice(0,16);
+    }
+    function parseDate(v){ return v ? new Date(v) : null; }
+    function fmtDate(v, opts={day:"2-digit",month:"2-digit",year:"numeric"}) {
+      const d=parseDate(v); if(!d || Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleDateString("vi-VN",opts);
+    }
+    function fmtDateTime(v){
+      const d=parseDate(v); if(!d || Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleString("vi-VN",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+    }
+    function fmtMinutes(mins){
+      mins = Math.round(Number(mins)||0);
+      const h=Math.floor(mins/60), m=mins%60;
+      return h ? `${h}h ${m}m` : `${m}m`;
+    }
+    function mondayOf(date){
+      const d=new Date(date); d.setHours(0,0,0,0);
+      const day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); return d;
+    }
+    function addDays(date,n){ const d=new Date(date); d.setDate(d.getDate()+n); return d; }
+    function startOfDay(date){ const d=new Date(date); d.setHours(0,0,0,0); return d; }
+    function endOfDay(date){ const d=startOfDay(date); d.setDate(d.getDate()+1); return d; }
+    function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
+    function randomCode(){ return Math.random().toString(36).slice(2,6).toUpperCase()+Math.random().toString(36).slice(2,6).toUpperCase(); }
+    function normalizeHttpUrl(value){
+      try{const u=new URL(String(value||"").trim()); return ["http:","https:"].includes(u.protocol)?u.href:"";}catch(_){return "";}
+    }
+
+    function subjectById(id){ return state.subjects.find(s=>s.id===id) || state.documentSubjects.find(s=>s.id===id); }
+    function subjectName(id){
+      const s=subjectById(id);
+      return s ? s.name : "Chưa gán môn";
+    }
+    function subjectColor(id){ return subjectById(id)?.color || "#EC4899"; }
+
+    function toast(msg){
+      const t=el("toast"); t.textContent=msg; t.classList.remove("hide");
+      clearTimeout(window.__toastTimer); window.__toastTimer=setTimeout(()=>t.classList.add("hide"),2600);
+    }
+
+    /* =========================================================
+       4. STORAGE LAYER — FIRESTORE FIRST, LOCALSTORAGE FALLBACK
+       Every user collection is nested under users/{uid}/...
+       ========================================================= */
+    function lsKey(collection, id="__all"){
+      return `${localPrefix()}${collection}_${id}`;
+    }
+    function lsRead(collection){
+      try {
+        const raw=localStorage.getItem(lsKey(collection));
+        return raw ? JSON.parse(raw) : [];
+      } catch (_) { return []; }
+    }
+    function lsWrite(collection, rows){
+      localStorage.setItem(lsKey(collection), JSON.stringify(rows));
+    }
+    function lsReadDoc(collection,id){
+      try { const raw=localStorage.getItem(lsKey(collection,id)); return raw ? JSON.parse(raw) : null; }
+      catch(_) { return null; }
+    }
+    function lsWriteDoc(collection,id,data){
+      localStorage.setItem(lsKey(collection,id), JSON.stringify(data));
+    }
+    function lsDeleteCollection(collection){
+      localStorage.removeItem(lsKey(collection));
+      Object.keys(localStorage).filter(k=>k.startsWith(`${localPrefix()}${collection}_`)).forEach(k=>localStorage.removeItem(k));
+    }
+
+    function fsCollection(collection){
+      if(!firebaseReady || !db || !state.user) return null;
+      return db.collection("users").doc(uid()).collection(collection);
+    }
+
+    function syncAvailable(){ return firebaseReady && db && state.user && navigator.onLine !== false; }
+    function firebasePublicAvailable(){ return firebaseReady && db && navigator.onLine !== false; }
+    function socialBackendError(scope="social"){
+      const code=firebaseInitError?.code ? ` (${firebaseInitError.code})` : "";
+      const detail=firebaseInitError?.message ? `: ${firebaseInitError.message}` : ".";
+      return `Firebase social chưa sẵn sàng${code}${detail}`;
+    }
+    function markSyncMode(mode){ state.social.syncMode=mode; updateSocialSyncBadge(); }
+    function logFirebaseError(scope,err){
+      if(APP_CONFIG.development) console.error(`[MagicStudy:${scope}]`,err);
+    }
+
+    async function loadCollection(collection){
+      if(syncAvailable()){
+        try{
+          const snap=await fsCollection(collection).get();
+          const rows=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.updatedAt||b.createdAt||0)-new Date(a.updatedAt||a.createdAt||0));
+          lsWrite(collection,rows);
+          return rows;
+        }catch(err){ logFirebaseError(`read:${collection}`,err); }
+      }
+      return lsRead(collection);
+    }
+
+    async function saveCollectionRow(collection,data,id=null){
+      const row={...data,id:id||data.id||crypto.randomUUID?.()||`${Date.now()}_${Math.random().toString(36).slice(2)}`,uid:uid()};
+      const rows=lsRead(collection).filter(x=>x.id!==row.id); rows.unshift(row); lsWrite(collection,rows);
+      if(syncAvailable()){
+        try{
+          const {id:docId,...payload}=row;
+          await fsCollection(collection).doc(docId).set(payload,{merge:true});
+          markSyncMode("firebase");
+        }catch(err){ logFirebaseError(`write:${collection}`,err); markSyncMode("local"); }
+      }else markSyncMode("local");
+      return row;
+    }
+
+    async function deleteCollectionRow(collection,id){
+      lsWrite(collection,lsRead(collection).filter(x=>x.id!==id));
+      if(syncAvailable()){
+        try{ await fsCollection(collection).doc(id).delete(); markSyncMode("firebase"); }
+        catch(err){ logFirebaseError(`delete:${collection}`,err); markSyncMode("local"); }
+      }else markSyncMode("local");
+    }
+
+    async function loadDoc(collection,docId,fallback={}){
+      if(syncAvailable()){
+        try{
+          const snap=await fsCollection(collection).doc(docId).get();
+          if(snap.exists){ const d={id:snap.id,...snap.data()}; lsWriteDoc(collection,docId,d); return d; }
+        }catch(err){ logFirebaseError(`read-doc:${collection}/${docId}`,err); }
+      }
+      return lsReadDoc(collection,docId) || fallback;
+    }
+
+    async function saveDoc(collection,docId,data){
+      const d={...data,uid:uid(),id:docId}; lsWriteDoc(collection,docId,d);
+      if(syncAvailable()){
+        try{ const {id,...payload}=d; await fsCollection(collection).doc(docId).set(payload,{merge:true}); markSyncMode("firebase"); }
+        catch(err){ logFirebaseError(`write-doc:${collection}/${docId}`,err); markSyncMode("local"); }
+      }else markSyncMode("local");
+      return d;
+    }
+
+    async function loadMaterials(subjectId){
+      if(syncAvailable()){
+        try{
+          const snap=await db.collection("users").doc(uid()).collection("documentSubjects").doc(subjectId).collection("materials").get();
+          const rows=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.updatedAt||b.createdAt||0)-new Date(a.updatedAt||a.createdAt||0));
+          lsWrite(`materials_${subjectId}`,rows); state.materialsBySubject[subjectId]=rows; return rows;
+        }catch(err){ logFirebaseError(`materials-read:${subjectId}`,err); }
+      }
+      const rows=lsRead(`materials_${subjectId}`); state.materialsBySubject[subjectId]=rows; return rows;
+    }
+    async function loadAllMaterials(){ state.materialsBySubject={}; for(const s of state.documentSubjects) await loadMaterials(s.id); }
+    async function saveMaterial(subjectId,data,id=null){
+      const collection=`materials_${subjectId}`;
+      const row={...data,id:id||data.id||crypto.randomUUID?.()||`${Date.now()}_${Math.random().toString(36).slice(2)}`,uid:uid(),subjectId};
+      const rows=lsRead(collection).filter(x=>x.id!==row.id); rows.unshift(row); lsWrite(collection,rows); state.materialsBySubject[subjectId]=rows;
+      if(syncAvailable()){
+        try{ const {id:docId,...payload}=row; await db.collection("users").doc(uid()).collection("documentSubjects").doc(subjectId).collection("materials").doc(docId).set(payload,{merge:true}); markSyncMode("firebase"); }
+        catch(err){ logFirebaseError(`material-write:${subjectId}`,err); markSyncMode("local"); }
+      }else markSyncMode("local");
+      return row;
+    }
+    async function deleteMaterial(subjectId,id){
+      const collection=`materials_${subjectId}`; lsWrite(collection,lsRead(collection).filter(x=>x.id!==id)); state.materialsBySubject[subjectId]=lsRead(collection);
+      if(syncAvailable()){
+        try{ await db.collection("users").doc(uid()).collection("documentSubjects").doc(subjectId).collection("materials").doc(id).delete(); markSyncMode("firebase"); }
+        catch(err){ logFirebaseError(`material-delete:${subjectId}`,err); markSyncMode("local"); }
+      }else markSyncMode("local");
+    }
+
+    async function loadOwnedShares(){
+      if(syncAvailable()){
+        try{
+          const snap=await db.collection("shares").where("uid","==",uid()).get();
+          state.shares=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+          lsWrite("shares",state.shares); return state.shares;
+        }catch(err){ logFirebaseError("shares-read",err); }
+      }
+      state.shares=lsRead("shares"); return state.shares;
+    }
+
+    async function deleteDocRefList(refs){
+      for(let i=0;i<refs.length;i+=450){ const chunk=refs.slice(i,i+450),batch=db.batch(); chunk.forEach(ref=>batch.delete(ref)); await batch.commit(); }
+    }
+
+    async function deleteAllUserData(){
+      const oldUid=uid();
+      COLLECTIONS.forEach(c=>lsDeleteCollection(c));
+      Object.keys(localStorage).filter(k=>k.startsWith(`${localPrefix()}materials_`)).forEach(k=>localStorage.removeItem(k));
+      state.materialsBySubject={};
+      if(syncAvailable()){
+        try{
+          for(const c of COLLECTIONS.filter(c=>c!=="shares")){
+            const snap=await fsCollection(c).get(); await deleteDocRefList(snap.docs.map(d=>d.ref));
+          }
+          const subjectSnap=await db.collection("users").doc(oldUid).collection("documentSubjects").get();
+          const nestedRefs=[]; subjectSnap.docs.forEach(s=>{});
+          for(const sdoc of subjectSnap.docs){
+            const mats=await sdoc.ref.collection("materials").get(); nestedRefs.push(...mats.docs.map(d=>d.ref)); nestedRefs.push(sdoc.ref);
+          }
+          await deleteDocRefList(nestedRefs);
+          const shareSnap=await db.collection("shares").where("uid","==",oldUid).get(); await deleteDocRefList(shareSnap.docs.map(d=>d.ref));
+          const profileSnap=await db.collection("users").doc(oldUid).collection("profile").doc("main").get();
+          const oldUsername=profileSnap.exists ? String(profileSnap.data().username||"").toLowerCase() : "";
+          if(oldUsername) await db.collection("usernames").doc(oldUsername).delete().catch(()=>{});
+          await db.collection("users").doc(oldUid).collection("profile").doc("main").delete().catch(()=>{});
+        }catch(err){ logFirebaseError("delete-all",err); toast("Một phần dữ liệu Firebase chưa thể xóa; cache cục bộ đã được dọn."); }
+      }
+      clearLocalSocial();
+      localPublicUserDeleteByUid(oldUid);
+    }
+
+    async function loadAllData(){
+      for(const c of COLLECTIONS.filter(c=>c!=="shares")) state[c]=await loadCollection(c);
+      await loadOwnedShares();
+      await loadAllMaterials();
+      state.profile=normalizeProfile(await loadDoc("profile","main",{}));
+      syncLocalPublicUser();
+    }
+
+    /* =========================================================
+       5. AUTH
+       ========================================================= */
+    function setConnectionBadge(){
+      const badge=el("connectionBadge");
+      const ready=firebaseReady && db && auth;
+      badge.textContent=ready ? "● Firebase sẵn sàng" : "● LocalStorage fallback";
+      badge.style.color=ready ? "var(--success)" : "var(--warning)";
+      badge.style.background=ready ? "var(--success-soft)" : "var(--warning-soft)";
+      APP_CONFIG.firebaseReady=!!ready;
+    }
+
+    let authMode="login";
+    let pendingLocalAuth=false;
+    function normalizeUsername(value){ return String(value||"").trim().replace(/^@+/g,"").toLowerCase(); }
+    function isValidUsername(value){ return /^[a-z0-9_]{3,20}$/.test(value); }
+    function usernameError(value){
+      const u=normalizeUsername(value); if(!u) return "Username không được để trống.";
+      if(!isValidUsername(u)) return "Username phải dài 3–20 ký tự và chỉ gồm chữ cái, số hoặc _.";
+      return "";
+    }
+
+    function localAccountsRead(){ try{return JSON.parse(localStorage.getItem("magicstudy_local_accounts")||"[]");}catch(_){return [];} }
+    function localAccountsWrite(rows){ localStorage.setItem("magicstudy_local_accounts",JSON.stringify(rows)); }
+    function localPublicUsersRead(){ try{return JSON.parse(localStorage.getItem("magicstudy_public_users")||"{}");}catch(_){return {};} }
+    function localPublicUsersWrite(obj){ localStorage.setItem("magicstudy_public_users",JSON.stringify(obj)); }
+    function syncLocalPublicUser(){
+      if(!state.user || !state.profile.username) return;
+      const all=localPublicUsersRead(); all[state.profile.username]={uid:uid(),username:state.profile.username,displayName:state.profile.displayName||state.profile.name||"Magic Student",avatar:state.profile.avatar||""}; localPublicUsersWrite(all);
+    }
+    function localPublicUserDeleteByUid(id){
+      const all=localPublicUsersRead(); Object.keys(all).forEach(k=>{if(all[k]?.uid===id)delete all[k];}); localPublicUsersWrite(all);
+    }
+
+    async function getUsernameIndex(username){
+      const u=normalizeUsername(username); if(!isValidUsername(u)) return null;
+      if(FirebaseConfigured){
+        if(!firebasePublicAvailable()) throw new Error(socialBackendError("username-search"));
+        try{
+          const snap=await db.collection("usernames").doc(u).get();
+          return snap.exists ? snap.data() : null;
+        }catch(err){
+          throw new Error(firebaseSocialErrorMessage("username-search",err));
+        }
+      }
+      return localPublicUsersRead()[u]||null;
+    }
+    async function assertUsernameAvailable(username,exceptUid=""){
+      const u=normalizeUsername(username); const e=usernameError(u); if(e) throw new Error(e);
+      const found=await getUsernameIndex(u); if(found && found.uid!==exceptUid) throw new Error("Username đã được sử dụng.");
+      return u;
+    }
+
+    function switchAuth(mode){
+      authMode=mode;
+      el("tabLogin").classList.toggle("active",mode==="login");
+      el("tabRegister").classList.toggle("active",mode==="register");
+      el("authNameWrap").style.display=mode==="register"?"flex":"none";
+      el("authUsernameWrap").style.display=mode==="register"?"flex":"none";
+      el("authTitle").textContent=mode==="login"?"Chào mừng quay lại":"Tạo tài khoản MagicStudy";
+      el("authSubtitle").textContent=mode==="login"?"Đăng nhập để mở không gian học tập cá nhân.":"Đăng ký với Email, Password, Họ tên và username.";
+      el("authSubmit").textContent=mode==="login"?"Đăng nhập":"Đăng ký";
+    }
+    function showAuth(){ el("authScreen").style.display="grid"; el("appScreen").style.display="none"; }
+
+    async function localRegister(email,name,username){
+      const rows=localAccountsRead();
+      if(rows.some(a=>a.email.toLowerCase()===email.toLowerCase())) throw new Error("Email đã được đăng ký trong LocalStorage.");
+      if(rows.some(a=>a.username===username)) throw new Error("Username đã được sử dụng.");
+      const localUid=`offline_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+      const account={uid:localUid,email,username,displayName:name||email.split("@")[0],createdAt:nowISO()}; rows.push(account); localAccountsWrite(rows);
+      state.user={uid:localUid,email,displayName:account.displayName};
+      await saveDoc("profile","main",{uid:localUid,username,displayName:account.displayName,avatar:"",primaryColor:"#EC4899",darkMode:false,notificationsEnabled:true,reminderMinutes:60,createdAt:account.createdAt,updatedAt:nowISO(),name:account.displayName,primary:"#EC4899",dark:false,notifications:true,reminder:60});
+      syncLocalPublicUser(); pendingLocalAuth=true;
+      await enterApp();
+    }
+
+    async function localLogin(email,name){
+      const rows=localAccountsRead();
+      let account=rows.find(a=>a.email.toLowerCase()===email.toLowerCase());
+      if(!account){
+        const usernameCandidate=normalizeUsername((name||email.split("@")[0]).replace(/[^a-z0-9_]/gi,"").slice(0,20)) || `user_${Math.random().toString(36).slice(2,7)}`;
+        let candidate=usernameCandidate, n=1; while(rows.some(a=>a.username===candidate)){candidate=(usernameCandidate.slice(0,18)+n++).slice(0,20);}
+        account={uid:`offline_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,email,username:candidate,displayName:name||email.split("@")[0],createdAt:nowISO()}; rows.push(account); localAccountsWrite(rows);
+      }
+      state.user={uid:account.uid,email:account.email,displayName:account.displayName}; await enterApp();
+    }
+
+    async function claimUsernameAndProfile(username,profilePatch={}){
+      const normalized=await assertUsernameAvailable(username,uid());
+      const displayName=profilePatch.displayName || state.profile.displayName || state.user?.displayName || "Magic Student";
+      const avatar=profilePatch.avatar ?? state.profile.avatar ?? "";
+      const previous=normalizeUsername(state.profile.username||"");
+      const timestamp=nowISO();
+      if(syncAvailable()){
+        try{
+          const newRef=db.collection("usernames").doc(normalized);
+          const profileRef=db.collection("users").doc(uid()).collection("profile").doc("main");
+          const oldRef=previous?db.collection("usernames").doc(previous):null;
+          await db.runTransaction(async tx=>{
+            const newSnap=await tx.get(newRef);
+            let oldSnap=null; if(oldRef && previous!==normalized) oldSnap=await tx.get(oldRef);
+            if(newSnap.exists && String(newSnap.data().uid)!==uid()) throw new Error("Username đã được sử dụng.");
+            const merged={...state.profile,...profilePatch,uid:uid(),username:normalized,displayName,avatar,primaryColor:profilePatch.primaryColor||state.profile.primaryColor||"#EC4899",darkMode:profilePatch.darkMode ?? state.profile.darkMode ?? false,notificationsEnabled:profilePatch.notificationsEnabled ?? state.profile.notificationsEnabled ?? true,reminderMinutes:Number(profilePatch.reminderMinutes ?? state.profile.reminderMinutes ?? 60),createdAt:state.profile.createdAt||timestamp,updatedAt:timestamp,name:displayName,primary:profilePatch.primaryColor||state.profile.primaryColor||"#EC4899",dark:profilePatch.darkMode ?? state.profile.darkMode ?? false,notifications:profilePatch.notificationsEnabled ?? state.profile.notificationsEnabled ?? true,reminder:Number(profilePatch.reminderMinutes ?? state.profile.reminderMinutes ?? 60)};
+            if(!newSnap.exists || String(newSnap.data().uid)===uid()) tx.set(newRef,{uid:uid(),username:normalized,displayName,avatar},{merge:true});
+            tx.set(profileRef,merged,{merge:true});
+            if(oldRef && previous!==normalized && oldSnap?.exists && String(oldSnap.data().uid)===uid()) tx.delete(oldRef);
+            state.profile=normalizeProfile(merged);
+          });
+        }catch(err){ logFirebaseError("username-claim",err); throw err; }
+      }else{
+        const all=localPublicUsersRead(); const existing=all[normalized]; if(existing && existing.uid!==uid()) throw new Error("Username đã được sử dụng.");
+        if(previous && previous!==normalized) delete all[previous];
+        all[normalized]={uid:uid(),username:normalized,displayName,avatar}; localPublicUsersWrite(all);
+        state.profile=normalizeProfile({...state.profile,...profilePatch,uid:uid(),username:normalized,displayName,avatar,updatedAt:timestamp}); await saveDoc("profile","main",state.profile);
+      }
+      syncLocalPublicUser(); applyProfileTheme();
+      return normalized;
+    }
+
+    function normalizeProfile(p={}){
+      const displayName=p.displayName||p.name||state.user?.displayName||"Edu Student";
+      const primaryColor=p.primaryColor||p.primary||"#EC4899";
+      const darkMode=p.darkMode ?? p.dark ?? false;
+      const notificationsEnabled=p.notificationsEnabled ?? p.notifications ?? true;
+      const reminderMinutes=Number(p.reminderMinutes ?? p.reminder ?? 60)||60;
+      return {...p,uid:p.uid||state.user?.uid||"",username:normalizeUsername(p.username||""),displayName,avatar:String(p.avatar||""),primaryColor,darkMode:!!darkMode,notificationsEnabled:!!notificationsEnabled,reminderMinutes,name:displayName,primary:primaryColor,dark:!!darkMode,notifications:!!notificationsEnabled,reminder:reminderMinutes};
+    }
+
+    function showUsernameSetup(){
+      const modal=el("usernameSetupModal"); if(!modal)return; modal.classList.add("show"); modal.setAttribute("aria-hidden","false"); el("usernameSetupInput").value=""; el("usernameSetupError").hidden=true; setTimeout(()=>el("usernameSetupInput").focus(),50);
+    }
+    function hideUsernameSetup(){ const modal=el("usernameSetupModal"); modal.classList.remove("show"); modal.setAttribute("aria-hidden","true"); }
+
+    async function ensureUsername(){
+      state.profile=normalizeProfile(state.profile);
+      if(!state.profile.username){ showUsernameSetup(); return false; }
+      syncLocalPublicUser(); return true;
+    }
+
+    async function enterApp(){
+      const sessionUid=uid();
+      el("authScreen").style.display="none"; el("appScreen").style.display="block";
+      await loadAllData();
+      if(!state.user || uid()!==sessionUid)return;
+      applyProfileTheme(); populateSubjectSelectors(); await checkNotifications();
+      if(!state.user || uid()!==sessionUid)return;
+      await loadSocialData(); renderAll();
+      if(!state.user || uid()!==sessionUid)return;
+      const ready=await ensureUsername(); if(!ready) toast("Hãy thiết lập username để tiếp tục.");
+    }
+
+    function clearUIForLogout(){
+      stopTimer(false); unsubscribeSocial();
+      state.user=null; state.subjects=[]; state.schedule=[]; state.tasks=[]; state.exams=[]; state.grades=[]; state.documentSubjects=[]; state.materialsBySubject={}; state.pomodoros=[]; state.studySessions=[]; state.goals=[]; state.notes=[]; state.notifications=[]; state.shares=[];
+      state.profile=normalizeProfile({name:"Edu Student",displayName:"Edu Student",primaryColor:"#EC4899",darkMode:false,notificationsEnabled:true,reminderMinutes:60});
+      state.view="dashboard"; state.social={friends:[],incomingRequests:[],outgoingRequests:[],conversations:[],activeTab:"friends",activeFriend:null,activeConversationId:null,messages:[],searchUser:null,unread:{},unreadTotal:0,listener:null,syncMode:"firebase"};
+      el("globalSearch").value=""; el("notesSearch").value=""; hideUsernameSetup(); el("notificationPop").classList.remove("show"); clearChatUI(); showAuth();
+    }
+
+    if(firebaseReady){
+      unsubscribeAuth=auth.onAuthStateChanged(async user=>{
+        try{
+          if(user){ state.user=user; await enterApp(); }
+          else clearUIForLogout();
+        }catch(err){ logFirebaseError("auth-state",err); toast(err.message||"Không thể tải tài khoản."); }
+      });
+    }else showAuth();
+
+    el("tabLogin").addEventListener("click",()=>switchAuth("login"));
+    el("tabRegister").addEventListener("click",()=>switchAuth("register"));
+    el("authForm").addEventListener("submit",async e=>{
+      e.preventDefault();
+      const email=el("authEmail").value.trim().toLowerCase(), password=el("authPassword").value, name=el("authName").value.trim(), username=normalizeUsername(el("authUsername").value);
+      try{
+        if(authMode==="register"){
+          if(password.length<6) throw new Error("Mật khẩu cần ít nhất 6 ký tự.");
+          const ue=usernameError(username); if(ue)throw new Error(ue);
+          await assertUsernameAvailable(username);
+          if(firebaseReady && navigator.onLine!==false){
+            const cred=await auth.createUserWithEmailAndPassword(email,password);
+            try{
+              if(name) await cred.user.updateProfile({displayName:name});
+              state.user=cred.user;
+              state.profile=normalizeProfile({uid:cred.user.uid,username,displayName:name||email.split("@")[0],avatar:"",primaryColor:"#EC4899",darkMode:false,notificationsEnabled:true,reminderMinutes:60,createdAt:nowISO(),updatedAt:nowISO()});
+              await claimUsernameAndProfile(username,state.profile);
+              toast("Đăng ký thành công.");
+            }catch(err){ try{await cred.user.delete();}catch(_){ } throw err; }
+          }else{
+            await localRegister(email,name,username); toast("Đăng ký LocalStorage thành công (demo offline).");
+          }
+        }else{
+          if(firebaseReady && navigator.onLine!==false){ await auth.signInWithEmailAndPassword(email,password); }
+          else { if(password.length<6)throw new Error("Mật khẩu cần ít nhất 6 ký tự."); await localLogin(email,name); toast("Đang dùng LocalStorage fallback (không đồng bộ Internet)."); }
+        }
+      }catch(err){ logFirebaseError("auth-submit",err); toast(err.message||"Không thể xác thực."); }
+    });
+
+    el("usernameSetupForm").addEventListener("submit",async e=>{
+      e.preventDefault(); const input=el("usernameSetupInput"), errBox=el("usernameSetupError"); const normalized=normalizeUsername(input.value); const err=usernameError(normalized); if(err){errBox.textContent=err;errBox.hidden=false;return;}
+      el("usernameSetupSave").disabled=true; errBox.hidden=true;
+      try{ await claimUsernameAndProfile(normalized,{displayName:state.profile.displayName||state.user?.displayName||"Magic Student"}); hideUsernameSetup(); renderAll(); toast("Đã tạo username."); }
+      catch(err){errBox.textContent=err.message||"Không thể tạo username.";errBox.hidden=false;}
+      finally{el("usernameSetupSave").disabled=false;}
+    });
+
+    /* =========================================================
+       6. SOCIAL — USERNAME, FRIENDS, REQUESTS, CHAT REALTIME
+       Root Firestore collections:
+       usernames/{username}
+       friendRequests/{requestId}
+       friendships/{friendshipId}
+       conversations/{conversationId}
+       conversations/{conversationId}/messages/{messageId}
+       ========================================================= */
+    function socialFirebaseAvailable(){
+      return !!(firebaseReady && db && state.user);
+    }
+
+    function firebaseSocialErrorMessage(scope,err){
+      logFirebaseError(scope,err);
+      const code=err?.code ? ` (${err.code})` : "";
+      return `Firebase lỗi${code}: ${err?.message||"Không thể thực hiện thao tác."}`;
+    }
+
+    function updateSocialSyncBadge(){
+      const b=el("socialSyncBadge");
+      if(!b)return;
+      if(socialFirebaseAvailable()){
+        b.textContent=state.social.syncMode==="error"?"Firebase lỗi":"Firebase social";
+      }else if(FirebaseConfigured){
+        b.textContent="Firebase chưa sẵn sàng";
+      }else{
+        b.textContent="Local cache";
+      }
+    }
+
+    function setAvatar(node,user,fallback="U"){
+      if(!node)return;
+      node.textContent="";
+      node.replaceChildren();
+      const name=String(user?.displayName||user?.username||fallback||"U").trim();
+      const initials=name.split(/\s+/).slice(-2).map(x=>x[0]).join("").toUpperCase().slice(0,2)||fallback;
+      const url=normalizeHttpUrl(user?.avatar||"");
+      if(url){
+        const img=document.createElement("img");
+        img.src=url; img.alt=""; img.loading="lazy"; img.referrerPolicy="no-referrer";
+        img.onerror=()=>{node.replaceChildren();node.textContent=initials;};
+        node.appendChild(img);
+      }else node.textContent=initials;
+    }
+
+    function relationForUid(id){
+      if(!id||!state.user)return "self";
+      if(id===uid())return "self";
+      if(state.social.friends.some(f=>friendOther(f).uid===id))return "friend";
+      if(state.social.outgoingRequests.some(r=>r.toUid===id&&r.status==="pending"))return "outgoing";
+      if(state.social.incomingRequests.some(r=>r.fromUid===id&&r.status==="pending"))return "incoming";
+      return "none";
+    }
+
+    function friendshipId(a,b){return [String(a),String(b)].sort().join("__");}
+    function conversationId(a,b){return friendshipId(a,b);}
+    function requestId(a,b){return [String(a),String(b)].sort().join("__");}
+    function friendOther(f){
+      const me=uid();
+      const isA=f.userAUid===me;
+      return {
+        uid:isA?f.userBUid:f.userAUid,
+        username:isA?f.userBUsername:f.userAUsername,
+        displayName:isA?f.userBDisplayName:f.userADisplayName,
+        avatar:isA?f.userBAvatar:f.userAAvatar
+      };
+    }
+
+    function localSocialKey(name){ return `magicstudy_social_${uid()}_${name}`; }
+    function localSocialRead(name, fallback){ try{return JSON.parse(localStorage.getItem(localSocialKey(name))||JSON.stringify(fallback));}catch(_){return fallback;} }
+    function localSocialWrite(name,val){localStorage.setItem(localSocialKey(name),JSON.stringify(val));}
+    function localMessagesRead(cid){return localSocialRead(`messages_${cid}`,[]);}
+    function localMessagesWrite(cid,rows){localSocialWrite(`messages_${cid}`,rows);}
+    function clearLocalSocial(){ Object.keys(localStorage).filter(k=>k.startsWith(`magicstudy_social_${uid()}_`)).forEach(k=>localStorage.removeItem(k)); }
+
+    async function loadSocialData(){
+      if(!state.user)return;
+      unsubscribeSocial();
+      if(socialFirebaseAvailable()){
+        try{
+          const [fSnap,inSnap,outSnap,cSnap]=await Promise.all([
+            db.collection("friendships").where("members","array-contains",uid()).get(),
+            db.collection("friendRequests").where("toUid","==",uid()).get(),
+            db.collection("friendRequests").where("fromUid","==",uid()).get(),
+            db.collection("conversations").where("members","array-contains",uid()).get()
+          ]);
+          state.social.friends=fSnap.docs.map(d=>({id:d.id,...d.data()}));
+          state.social.incomingRequests=inSnap.docs.map(d=>({id:d.id,...d.data()}));
+          state.social.outgoingRequests=outSnap.docs.map(d=>({id:d.id,...d.data()}));
+          state.social.conversations=cSnap.docs.map(d=>({id:d.id,...d.data()}));
+          markSyncMode("firebase");
+          await refreshUnreadCounts();
+          renderSocial();
+          return;
+        }catch(err){
+          state.social.friends=[];
+          state.social.incomingRequests=[];
+          state.social.outgoingRequests=[];
+          state.social.conversations=[];
+          state.social.unread={};
+          state.social.unreadTotal=0;
+          markSyncMode("error");
+          const message=firebaseSocialErrorMessage("social-load",err);
+          renderSocial();
+          toast(message);
+          return false;
+        }
+      }
+
+      if(FirebaseConfigured){
+        const message=socialBackendError("social-load");
+        state.social.friends=[]; state.social.incomingRequests=[]; state.social.outgoingRequests=[]; state.social.conversations=[];
+        markSyncMode("error"); renderSocial(); toast(message);
+        return false;
+      }
+
+      // Local social storage is only used when Firebase is genuinely not configured.
+      state.social.friends=localSocialRead("friendships",[]).filter(f=>Array.isArray(f.members)&&f.members.includes(uid()));
+      const requests=localSocialRead("friendRequests",[]);
+      state.social.incomingRequests=requests.filter(r=>r.toUid===uid());
+      state.social.outgoingRequests=requests.filter(r=>r.fromUid===uid());
+      state.social.conversations=localSocialRead("conversations",[]).filter(c=>Array.isArray(c.members)&&c.members.includes(uid()));
+      markSyncMode("local");
+      await refreshUnreadCounts();
+      renderSocial();
+    }
+
+    function unsubscribeSocial(){
+      if(state.social?.listener){
+        try{state.social.listener();}catch(_){ }
+        state.social.listener=null;
+      }
+      if(state.social){
+        state.social.activeConversationId=null;
+        state.social.messages=[];
+      }
+    }
+
+    function clearChatUI(){
+      if(el("chatMessages"))el("chatMessages").replaceChildren();
+      if(el("chatActive"))el("chatActive").hidden=true;
+      if(el("chatEmpty"))el("chatEmpty").hidden=false;
+      if(el("chatName"))el("chatName").textContent="—";
+      if(el("chatUsername"))el("chatUsername").textContent="@—";
+      if(el("chatAvatar"))setAvatar(el("chatAvatar"),{},"U");
+    }
+
+    async function sendFriendRequest(target){
+      if(!state.user)throw new Error("Bạn cần đăng nhập.");
+      if(!target?.uid||target.uid===uid())return toast("Bạn không thể kết bạn với chính mình.");
+      if(state.profile.username===target.username)throw new Error("Bạn không thể kết bạn với chính mình.");
+
+      const relation=relationForUid(target.uid);
+      if(relation==="friend")return toast("Hai bạn đã là bạn bè.");
+      if(relation==="outgoing")return toast("Bạn đã gửi lời mời trước đó.");
+      if(relation==="incoming")return toast("Người dùng này đã gửi lời mời cho bạn.");
+
+      const normalizedTargetUsername=normalizeUsername(target.username);
+      if(!isValidUsername(normalizedTargetUsername))throw new Error("Username người nhận không hợp lệ.");
+      const id=requestId(uid(),target.uid);
+      const data={
+          fromUid:uid(),
+          toUid:target.uid,
+          fromUsername:normalizeUsername(state.profile.username),
+          fromDisplayName:String(state.profile.displayName||"Magic Student"),
+          fromAvatar:String(state.profile.avatar||""),
+          toUsername:normalizedTargetUsername,
+          toDisplayName:String(target.displayName||"Người dùng"),
+          toAvatar:String(target.avatar||""),
+          status:"pending",
+          createdAt:nowISO()
+        };
+      if(socialFirebaseAvailable()){
+        const requestRef=db.collection("friendRequests").doc(id);
+        const friendshipRef=db.collection("friendships").doc(friendshipId(uid(),target.uid));
+        try{
+          await db.runTransaction(async tx=>{
+            const reqSnap=await tx.get(requestRef);
+            const friendSnap=await tx.get(friendshipRef);
+            if(friendSnap.exists)throw new Error("Hai bạn đã là bạn bè.");
+            if(reqSnap.exists){
+              const existing=reqSnap.data()||{};
+              if(existing.status==="pending")throw new Error("Lời mời kết bạn đã tồn tại.");
+              throw new Error("Không thể tạo lời mời mới với người dùng này lúc này. Hãy thử lại sau.");
+            }
+            tx.set(requestRef,data);
+          });
+          markSyncMode("firebase");
+          state.social.outgoingRequests=[...state.social.outgoingRequests.filter(r=>r.id!==id&&r.toUid!==target.uid),{...data,id}];
+          renderSocial();
+          toast("Đã gửi lời mời kết bạn.");
+          return;
+        }catch(err){
+          markSyncMode("error");
+          throw new Error(firebaseSocialErrorMessage("friend-request",err));
+        }
+      }
+
+      if(FirebaseConfigured) throw new Error(socialBackendError("friend-request"));
+      const rows=localSocialRead("friendRequests",[]);
+      if(rows.some(r=>r.id===id&&r.status==="pending"))return toast("Lời mời kết bạn đã tồn tại.");
+      rows.push({...data,id});
+      localSocialWrite("friendRequests",rows);
+      await loadSocialData();
+      toast("Đã lưu lời mời vào bộ nhớ cục bộ.");
+    }
+
+    function buildFriendshipFromRequest(req){
+      const firstIsFrom=String(req.fromUid)<String(req.toUid);
+      const a=firstIsFrom?{
+        uid:req.fromUid,username:req.fromUsername,displayName:req.fromDisplayName,avatar:req.fromAvatar||""
+      }:{
+        uid:req.toUid,username:req.toUsername,displayName:req.toDisplayName,avatar:req.toAvatar||""
+      };
+      const b=firstIsFrom?{
+        uid:req.toUid,username:req.toUsername,displayName:req.toDisplayName,avatar:req.toAvatar||""
+      }:{
+        uid:req.fromUid,username:req.fromUsername,displayName:req.fromDisplayName,avatar:req.fromAvatar||""
+      };
+      return {
+        members:[a.uid,b.uid],
+        userAUid:a.uid,
+        userAUsername:a.username,
+        userADisplayName:a.displayName,
+        userAAvatar:a.avatar,
+        userBUid:b.uid,
+        userBUsername:b.username,
+        userBDisplayName:b.displayName,
+        userBAvatar:b.avatar,
+        createdAt:nowISO()
+      };
+    }
+
+    async function acceptFriendRequest(reqId){
+      if(!state.user)throw new Error("Bạn cần đăng nhập.");
+      const req=state.social.incomingRequests.find(r=>r.id===reqId);
+      if(!req||req.status!=="pending")return toast("Lời mời không còn hiệu lực.");
+      if(req.toUid!==uid())throw new Error("Bạn không có quyền chấp nhận lời mời này.");
+
+      if(socialFirebaseAvailable()){
+        const rref=db.collection("friendRequests").doc(reqId);
+        const fref=db.collection("friendships").doc(friendshipId(req.fromUid,req.toUid));
+        const friendship=buildFriendshipFromRequest(req);
+        try{
+          await db.runTransaction(async tx=>{
+            const requestSnap=await tx.get(rref);
+            const friendSnap=await tx.get(fref);
+            if(!requestSnap.exists)throw new Error("Lời mời không còn tồn tại.");
+            const latest=requestSnap.data()||{};
+            if(latest.status!=="pending")throw new Error("Lời mời không còn ở trạng thái chờ xử lý.");
+            if(latest.toUid!==uid())throw new Error("Bạn không có quyền chấp nhận lời mời này.");
+            if(friendSnap.exists){
+              tx.delete(rref);
+              return;
+            }
+            tx.set(fref,friendship);
+            tx.delete(rref);
+          });
+          markSyncMode("firebase");
+          state.social.incomingRequests=state.social.incomingRequests.filter(r=>r.id!==reqId);
+          state.social.outgoingRequests=state.social.outgoingRequests.filter(r=>r.id!==reqId);
+          if(!state.social.friends.some(f=>f.id===friendshipId(req.fromUid,req.toUid))){
+            state.social.friends=[...state.social.friends,{id:friendshipId(req.fromUid,req.toUid),...friendship}];
+          }
+          renderSocial();
+          toast("Đã chấp nhận lời mời. Hai bạn đã trở thành bạn bè.");
+          return;
+        }catch(err){
+          markSyncMode("error");
+          throw new Error(firebaseSocialErrorMessage("friend-accept",err));
+        }
+      }
+
+      if(FirebaseConfigured) throw new Error(socialBackendError("friend-accept"));
+      const requests=localSocialRead("friendRequests",[]).filter(r=>r.id!==reqId);
+      localSocialWrite("friendRequests",requests);
+      const friendship={...buildFriendshipFromRequest(req),id:friendshipId(req.fromUid,req.toUid)};
+      const fs=localSocialRead("friendships",[]).filter(f=>f.id!==friendship.id);
+      fs.push(friendship); localSocialWrite("friendships",fs);
+      await loadSocialData();
+      toast("Đã chấp nhận lời mời trong bộ nhớ cục bộ.");
+    }
+
+    async function rejectFriendRequest(reqId){
+      if(!state.user)throw new Error("Bạn cần đăng nhập.");
+      const req=state.social.incomingRequests.find(r=>r.id===reqId);
+      if(!req)return toast("Lời mời không còn tồn tại.");
+      if(req.toUid!==uid())throw new Error("Bạn không có quyền từ chối lời mời này.");
+
+      if(socialFirebaseAvailable()){
+        const ref=db.collection("friendRequests").doc(reqId);
+        try{
+          await db.runTransaction(async tx=>{
+            const snap=await tx.get(ref);
+            if(!snap.exists)throw new Error("Lời mời không còn tồn tại.");
+            const data=snap.data()||{};
+            if(data.toUid!==uid())throw new Error("Bạn không có quyền từ chối lời mời này.");
+            if(data.status!=="pending")throw new Error("Lời mời không còn ở trạng thái chờ xử lý.");
+            tx.delete(ref);
+          });
+          markSyncMode("firebase");
+          state.social.incomingRequests=state.social.incomingRequests.filter(r=>r.id!==reqId);
+          renderSocial();
+          toast("Đã từ chối lời mời.");
+          return;
+        }catch(err){
+          markSyncMode("error");
+          throw new Error(firebaseSocialErrorMessage("friend-reject",err));
+        }
+      }
+
+      if(FirebaseConfigured) throw new Error(socialBackendError("friend-reject"));
+      localSocialWrite("friendRequests",localSocialRead("friendRequests",[]).filter(r=>r.id!==reqId));
+      await loadSocialData();
+      toast("Đã từ chối lời mời trong bộ nhớ cục bộ.");
+    }
+
+    async function cancelFriendRequest(reqId){
+      if(!state.user)throw new Error("Bạn cần đăng nhập.");
+      const req=state.social.outgoingRequests.find(r=>r.id===reqId);
+      if(!req)return toast("Lời mời không còn tồn tại.");
+      if(req.fromUid!==uid())throw new Error("Bạn không có quyền hủy lời mời này.");
+
+      if(socialFirebaseAvailable()){
+        const ref=db.collection("friendRequests").doc(reqId);
+        try{
+          await db.runTransaction(async tx=>{
+            const snap=await tx.get(ref);
+            if(!snap.exists)throw new Error("Lời mời không còn tồn tại.");
+            const data=snap.data()||{};
+            if(data.fromUid!==uid())throw new Error("Bạn không có quyền hủy lời mời này.");
+            if(data.status!=="pending")throw new Error("Lời mời không còn ở trạng thái chờ xử lý.");
+            tx.delete(ref);
+          });
+          markSyncMode("firebase");
+          state.social.outgoingRequests=state.social.outgoingRequests.filter(r=>r.id!==reqId);
+          renderSocial();
+          toast("Đã hủy lời mời.");
+          return;
+        }catch(err){
+          markSyncMode("error");
+          throw new Error(firebaseSocialErrorMessage("friend-cancel",err));
+        }
+      }
+
+      if(FirebaseConfigured) throw new Error(socialBackendError("friend-cancel"));
+      localSocialWrite("friendRequests",localSocialRead("friendRequests",[]).filter(r=>r.id!==reqId));
+      await loadSocialData();
+      toast("Đã hủy lời mời trong bộ nhớ cục bộ.");
+    }
+
+    async function removeFriend(friend){
+      const id=friendshipId(uid(),friend.uid);
+      if(!confirm(`Xóa ${friend.displayName||"người dùng"} khỏi danh sách bạn bè?`))return;
+      if(socialFirebaseAvailable()){
+        try{
+          await db.collection("friendships").doc(id).delete();
+          markSyncMode("firebase");
+          state.social.friends=state.social.friends.filter(f=>f.id!==id);
+          if(state.social.activeFriend===friend.uid)closeChat();
+          renderSocial();
+          toast("Đã xóa bạn bè.");
+          return;
+        }catch(err){
+          markSyncMode("error");
+          throw new Error(firebaseSocialErrorMessage("friend-remove",err));
+        }
+      }
+      if(FirebaseConfigured) throw new Error(socialBackendError("friend-remove"));
+      localSocialWrite("friendships",localSocialRead("friendships",[]).filter(f=>f.id!==id));
+      if(state.social.activeFriend===friend.uid)closeChat();
+      await loadSocialData();
+      toast("Đã xóa bạn bè trong bộ nhớ cục bộ.");
+    }
+
+    async function ensureConversation(friend){
+      const cid=conversationId(uid(),friend.uid);
+      const base={members:[uid(),friend.uid],lastMessage:"",lastSenderUid:"",createdAt:nowISO(),updatedAt:nowISO()};
+      if(socialFirebaseAvailable()){
+        try{
+          const ref=db.collection("conversations").doc(cid);
+          const snap=await ref.get();
+          if(!snap.exists)await ref.set(base);
+          markSyncMode("firebase");
+          return cid;
+        }catch(err){
+          markSyncMode("error");
+          throw new Error(firebaseSocialErrorMessage("conversation",err));
+        }
+      }
+      if(FirebaseConfigured) throw new Error(socialBackendError("conversation"));
+      const rows=localSocialRead("conversations",[]);
+      if(!rows.some(c=>c.id===cid))rows.push({...base,id:cid});
+      localSocialWrite("conversations",rows);
+      return cid;
+    }
+
+    async function markMessagesSeen(cid,rows){
+      const unseen=rows.filter(m=>m.receiverUid===uid()&&!m.seen);
+      if(!unseen.length)return;
+      if(socialFirebaseAvailable()){
+        try{
+          const batch=db.batch();
+          unseen.forEach(m=>batch.update(db.collection("conversations").doc(cid).collection("messages").doc(m.id),{seen:true}));
+          await batch.commit();
+          return;
+        }catch(err){
+          logFirebaseError("messages-seen",err);
+          return;
+        }
+      }
+      if(FirebaseConfigured) return;
+      const local=localMessagesRead(cid).map(m=>m.receiverUid===uid()?{...m,seen:true}:m);
+      localMessagesWrite(cid,local); state.social.messages=local;
+    }
+
+    async function refreshUnreadCounts(){
+      const unread={}; let total=0;
+      for(const c of state.social.conversations.slice(0,30)){
+        try{
+          let rows=[];
+          if(socialFirebaseAvailable()){
+            const snap=await db.collection("conversations").doc(c.id).collection("messages").orderBy("createdAt","desc").limit(50).get();
+            rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+          }else if(FirebaseConfigured){
+            return;
+          }else{
+            rows=localMessagesRead(c.id).slice(-50).reverse();
+          }
+          const n=rows.filter(m=>m.receiverUid===uid()&&!m.seen).length;
+          if(n){unread[c.id]=n;total+=n;}
+        }catch(err){
+          logFirebaseError("unread",err);
+        }
+      }
+      state.social.unread=unread; state.social.unreadTotal=total; updateSocialBadges();
+    }
+
+    async function openChat(friendUid){
+      const friend=state.social.friends.map(friendOther).find(f=>f.uid===friendUid); if(!friend)return toast("Chỉ có thể chat với bạn bè.");
+      state.social.activeFriend=friend.uid;
+      const cid=await ensureConversation(friend);
+      state.social.activeConversationId=cid;
+      unsubscribeSocial();
+      state.social.activeConversationId=cid;
+      const renderSnapshot=rows=>{state.social.messages=rows.sort((a,b)=>new Date(a.createdAt||0)-new Date(b.createdAt||0));renderChatMessages();markMessagesSeen(cid,state.social.messages);refreshUnreadCounts();renderSocialLists();};
+      if(socialFirebaseAvailable()){
+        try{
+          state.social.listener=db.collection("conversations").doc(cid).collection("messages").orderBy("createdAt","asc").limit(200).onSnapshot(
+            snap=>{
+              const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+              markSyncMode("firebase");
+              renderSnapshot(rows);
+            },
+            err=>{
+              markSyncMode("error");
+              toast(firebaseSocialErrorMessage("message-snapshot",err));
+            }
+          );
+          markSyncMode("firebase");
+        }catch(err){
+          markSyncMode("error");
+          throw new Error(firebaseSocialErrorMessage("message-listener",err));
+        }
+      }else if(FirebaseConfigured){
+        throw new Error(socialBackendError("message-listener"));
+      }else{
+        renderSnapshot(localMessagesRead(cid));
+      }
+      renderChatHeader(friend); renderChatLayout(); renderChatMessages();
+      setTimeout(()=>{el("chatInput")?.focus();scrollChatToBottom();},40);
+    }
+
+    function closeChat(){unsubscribeSocial();state.social.activeFriend=null;state.social.activeConversationId=null;state.social.messages=[];clearChatUI();renderSocialLists();}
+
+    async function sendChatMessage(){
+      const input=el("chatInput"); if(!input || !state.social.activeFriend)return;
+      const text=input.value.slice(0,2000); if(!text.trim())return;
+      const friend=state.social.friends.map(friendOther).find(f=>f.uid===state.social.activeFriend);if(!friend)return;
+      const cid=state.social.activeConversationId||await ensureConversation(friend);
+      const message={senderUid:uid(),receiverUid:friend.uid,text,createdAt:nowISO(),seen:false};
+      if(socialFirebaseAvailable()){
+        try{
+          await db.collection("conversations").doc(cid).collection("messages").add(message);
+          await db.collection("conversations").doc(cid).set({members:[uid(),friend.uid],lastMessage:text,lastSenderUid:uid(),updatedAt:message.createdAt},{merge:true});
+          markSyncMode("firebase");
+          input.value=""; autoGrowChatInput(); toast("Tin nhắn đã gửi.");
+          return;
+        }catch(err){
+          markSyncMode("error");
+          throw new Error(firebaseSocialErrorMessage("message-send",err));
+        }
+      }
+      if(FirebaseConfigured) throw new Error(socialBackendError("message-send"));
+      input.value=""; autoGrowChatInput();
+      const rows=localMessagesRead(cid);rows.push({...message,id:`local_${Date.now()}_${Math.random().toString(36).slice(2,7)}`});
+      localMessagesWrite(cid,rows);
+      const cs=localSocialRead("conversations",[]).filter(c=>c.id!==cid);
+      cs.push({id:cid,members:[uid(),friend.uid],lastMessage:text,lastSenderUid:uid(),createdAt:rows[0]?.createdAt||message.createdAt,updatedAt:message.createdAt});
+      localSocialWrite("conversations",cs);state.social.messages=rows;renderChatMessages();renderSocialLists();scrollChatToBottom();toast("Tin nhắn đã lưu trong bộ nhớ cục bộ.");
+    }
+
+    /* =========================================================
+       SOCIAL UI HELPERS — FRIEND LISTS, REQUESTS, CHAT UI
+       These functions are intentionally real render/interaction
+       functions used by renderSocial(), openChat() and initSocialUI().
+       ========================================================= */
+    function updateSocialBadges(){
+      const pendingIncoming=state.social.incomingRequests.filter(r=>r.status==="pending").length;
+      const unreadTotal=Number(state.social.unreadTotal)||0;
+      const reqBadge=el("friendRequestBadge");
+      const msgBadge=el("messageBadge");
+      const reqCount=el("friendsCount");
+      const convCount=el("conversationCount");
+      const setBadge=(node,count)=>{
+        if(!node)return;
+        node.textContent=String(count);
+        node.hidden=count<=0;
+      };
+      setBadge(reqBadge,pendingIncoming);
+      setBadge(msgBadge,unreadTotal);
+      if(reqCount)reqCount.textContent=`${state.social.friends.length} bạn`;
+      if(convCount)convCount.textContent=`${state.social.conversations.length} cuộc trò chuyện`;
+      updateSocialSyncBadge();
+    }
+
+    function socialUserHTML(user,fallback="U"){
+      const name=String(user?.displayName||user?.username||"Người dùng");
+      const username=normalizeUsername(user?.username||"");
+      const avatar=escapeHTML(String(user?.avatar||""));
+      const initial=escapeHTML(name.trim().split(/\s+/).slice(-2).map(x=>x[0]).join("").toUpperCase().slice(0,2)||fallback);
+      return `<div class="social-user"><div class="avatar" data-avatar-url="${avatar}">${initial}</div><div class="item-main"><div class="item-title">${escapeHTML(name)}</div><div class="item-sub">@${escapeHTML(username)}</div></div></div>`;
+    }
+
+    function hydrateAvatarImages(root=document){
+      $$(".avatar[data-avatar-url]",root).forEach(node=>{
+        const url=normalizeHttpUrl(node.getAttribute("data-avatar-url")||"");
+        if(!url)return;
+        const currentText=node.textContent;
+        const img=document.createElement("img");
+        img.src=url; img.alt=""; img.loading="lazy"; img.referrerPolicy="no-referrer";
+        img.onerror=()=>{node.replaceChildren();node.textContent=currentText;};
+        node.replaceChildren(img);
+      });
+    }
+
+    function renderSocialLists(){
+      const friendsRoot=el("friendsList");
+      if(friendsRoot){
+        const friends=[...state.social.friends]
+          .map(friendOther)
+          .filter(f=>f.uid)
+          .sort((a,b)=>(a.displayName||a.username||"").localeCompare(b.displayName||b.username||"","vi"));
+        friendsRoot.replaceChildren();
+        if(!friends.length){
+          friendsRoot.innerHTML=`<div class="empty">Chưa có bạn bè. Hãy mở tab <b>Tìm bạn</b> để kết nối.</div>`;
+        }else{
+          friends.forEach(friend=>{
+            const row=document.createElement("div");
+            row.className="item";
+            row.innerHTML=`${socialUserHTML(friend)}<div class="social-actions"><button class="btn btn-sm" data-social-action="chat" data-uid="${escapeHTML(friend.uid)}">Chat</button><button class="btn btn-sm btn-danger" data-social-action="remove-friend" data-uid="${escapeHTML(friend.uid)}">Xóa bạn</button></div>`;
+            friendsRoot.appendChild(row);
+          });
+          hydrateAvatarImages(friendsRoot);
+        }
+      }
+
+      const incomingRoot=el("incomingRequests");
+      if(incomingRoot){
+        const incoming=state.social.incomingRequests.filter(r=>r.status==="pending");
+        incomingRoot.replaceChildren();
+        if(!incoming.length){
+          incomingRoot.innerHTML=`<div class="empty">Không có lời mời mới.</div>`;
+        }else{
+          incoming.forEach(req=>{
+            const row=document.createElement("div");
+            row.className="item";
+            row.innerHTML=`${socialUserHTML({displayName:req.fromDisplayName,username:req.fromUsername,avatar:req.fromAvatar})}<div class="social-actions"><button class="btn btn-sm btn-success" data-social-action="accept" data-id="${escapeHTML(req.id)}">Chấp nhận</button><button class="btn btn-sm btn-danger" data-social-action="reject" data-id="${escapeHTML(req.id)}">Từ chối</button></div>`;
+            incomingRoot.appendChild(row);
+          });
+          hydrateAvatarImages(incomingRoot);
+        }
+      }
+
+      const outgoingRoot=el("outgoingRequests");
+      if(outgoingRoot){
+        const outgoing=state.social.outgoingRequests.filter(r=>r.status==="pending");
+        outgoingRoot.replaceChildren();
+        if(!outgoing.length){
+          outgoingRoot.innerHTML=`<div class="empty">Chưa gửi lời mời nào.</div>`;
+        }else{
+          outgoing.forEach(req=>{
+            const row=document.createElement("div");
+            row.className="item";
+            row.innerHTML=`${socialUserHTML({displayName:req.toDisplayName,username:req.toUsername,avatar:req.toAvatar})}<div class="social-actions"><span class="badge badge-yellow">Đã gửi lời mời</span><button class="btn btn-sm" data-social-action="cancel" data-id="${escapeHTML(req.id)}">Hủy</button></div>`;
+            outgoingRoot.appendChild(row);
+          });
+          hydrateAvatarImages(outgoingRoot);
+        }
+      }
+
+      const peopleRoot=el("chatPeopleList");
+      if(peopleRoot){
+        peopleRoot.replaceChildren();
+        const people=state.social.friends.map(friendOther).filter(f=>f.uid);
+        const byUid=Object.fromEntries(people.map(f=>[f.uid,f]));
+        const conversationRows=[...state.social.conversations]
+          .filter(c=>Array.isArray(c.members)&&c.members.includes(uid()))
+          .map(c=>({conversation:c,friend:byUid[c.members.find(id=>id!==uid())]}))
+          .filter(x=>x.friend)
+          .sort((a,b)=>new Date(b.conversation.updatedAt||0)-new Date(a.conversation.updatedAt||0));
+        const seenFriendIds=new Set();
+        conversationRows.forEach(({conversation,friend})=>{
+          seenFriendIds.add(friend.uid);
+          const row=document.createElement("div");
+          row.className=`item chat-person${state.social.activeFriend===friend.uid?" active":""}`;
+          const unread=Number(state.social.unread?.[conversation.id]||0);
+          row.innerHTML=`${socialUserHTML(friend)}<div class="item-main" style="flex:0 0 auto;max-width:45%;text-align:right"><div class="item-sub">${escapeHTML(String(conversation.lastMessage||"Chưa có tin nhắn").slice(0,70))}</div>${unread?`<span class="badge badge-pink">${unread}</span>`:""}</div>`;
+          row.dataset.socialAction="chat";
+          row.dataset.uid=friend.uid;
+          peopleRoot.appendChild(row);
+        });
+        people.forEach(friend=>{
+          if(seenFriendIds.has(friend.uid))return;
+          const row=document.createElement("div");
+          row.className=`item chat-person${state.social.activeFriend===friend.uid?" active":""}`;
+          row.innerHTML=`${socialUserHTML(friend)}<div class="item-main" style="flex:0 0 auto"><span class="muted tiny">Chưa chat</span></div>`;
+          row.dataset.socialAction="chat";
+          row.dataset.uid=friend.uid;
+          peopleRoot.appendChild(row);
+        });
+        if(!people.length)peopleRoot.innerHTML=`<div class="empty">Chưa có bạn bè để nhắn tin.</div>`;
+        else hydrateAvatarImages(peopleRoot);
+      }
+
+      updateSocialBadges();
+    }
+
+    function renderChatHeader(friend){
+      if(!friend)return;
+      const active=el("chatActive"), empty=el("chatEmpty");
+      if(active)active.hidden=false;
+      if(empty)empty.hidden=true;
+      if(el("chatName"))el("chatName").textContent=friend.displayName||"Người dùng";
+      if(el("chatUsername"))el("chatUsername").textContent=`@${normalizeUsername(friend.username||"")}`;
+      if(el("chatAvatar"))setAvatar(el("chatAvatar"),friend,"U");
+    }
+
+    function renderChatLayout(){
+      const active=el("chatActive"), empty=el("chatEmpty"), people=el("chatPeopleList");
+      if(!active||!empty)return;
+      const hasFriend=!!state.social.activeFriend;
+      active.hidden=!hasFriend;
+      empty.hidden=hasFriend;
+      if(people){
+        $$(".chat-person",people).forEach(node=>node.classList.toggle("active",node.dataset.uid===state.social.activeFriend));
+      }
+    }
+
+    function renderChatMessages(){
+      const root=el("chatMessages");
+      if(!root)return;
+      root.replaceChildren();
+      const rows=[...state.social.messages].sort((a,b)=>new Date(a.createdAt||0)-new Date(b.createdAt||0));
+      if(!rows.length){
+        const empty=document.createElement("div");
+        empty.className="empty";
+        empty.textContent="Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.";
+        root.appendChild(empty);
+        return;
+      }
+      const fragment=document.createDocumentFragment();
+      rows.forEach(message=>{
+        const mine=message.senderUid===uid();
+        const row=document.createElement("div");
+        row.className=`chat-bubble-row${mine?" mine":""}`;
+        const bubble=document.createElement("div");
+        bubble.className=`chat-bubble${mine?" mine":""}`;
+        const text=document.createElement("div");
+        text.className="chat-text";
+        text.textContent=String(message.text||"").slice(0,2000);
+        const meta=document.createElement("div");
+        meta.className="chat-meta";
+        meta.textContent=`${mine?"Bạn":"Người bạn"} · ${fmtDateTime(message.createdAt)}${mine&&message.seen?" · Đã xem":""}`;
+        bubble.append(text,meta);
+        row.appendChild(bubble);
+        fragment.appendChild(row);
+      });
+      root.appendChild(fragment);
+      requestAnimationFrame(scrollChatToBottom);
+    }
+
+    function scrollChatToBottom(){
+      const root=el("chatMessages");
+      if(root)root.scrollTop=root.scrollHeight;
+    }
+
+    function autoGrowChatInput(event){
+      const input=event?.target?.matches?.("#chatInput")?event.target:el("chatInput");
+      if(!input)return;
+      input.style.height="auto";
+      const max=120;
+      const next=Math.min(Math.max(input.scrollHeight,42),max);
+      input.style.height=`${next}px`;
+      input.style.overflowY=input.scrollHeight>max?"auto":"hidden";
+    }
+
+    function renderSearchResult(){
+      const root=el("usernameSearchResult"),u=state.social.searchUser; if(!u){root.innerHTML="";return;} const relation=relationForUid(u.uid); let action="";
+      if(relation==="self")action=`<span class="badge badge-violet">Đây là bạn</span>`; else if(relation==="friend")action=`<button class="btn btn-sm" data-social-action="chat" data-uid="${escapeHTML(u.uid)}">Chat</button><span class="badge badge-green">✓ Bạn bè</span>`; else if(relation==="outgoing")action=`<span class="badge badge-yellow">Đã gửi lời mời</span>`; else if(relation==="incoming")action=`<span class="badge badge-pink">Đang chờ bạn phản hồi</span>`; else action=`<button class="btn btn-sm btn-primary" data-social-action="add" data-uid="${escapeHTML(u.uid)}">＋ Kết bạn</button>`;
+      root.innerHTML=`<div class="item"><div class="social-user"><div class="avatar">${escapeHTML((u.displayName||u.username||"U").trim().split(/\s+/).slice(-2).map(x=>x[0]).join("").toUpperCase().slice(0,2)||"U")}</div><div class="item-main"><div class="item-title">${escapeHTML(u.displayName||"Người dùng")}</div><div class="item-sub">@${escapeHTML(u.username||"")}</div></div></div><div class="social-actions">${action}</div></div>`;
+    }
+    function renderSocial(){renderSocialLists();renderSearchResult();updateSocialBadges(); if(state.social.activeFriend){const f=state.social.friends.map(friendOther).find(x=>x.uid===state.social.activeFriend);if(f)renderChatHeader(f);} renderChatMessages();}
+
+    function setSocialTab(tab){
+      state.social.activeTab=tab;
+      $$('[data-social-tab]').forEach(b=>b.classList.toggle("active",b.dataset.socialTab===tab));
+      $$('.social-panel').forEach(p=>p.classList.toggle("active",p.id===`socialPanel-${tab}`));
+      if(tab!=="messages"){
+        closeChat();
+        loadSocialData().catch(()=>{});
+      }else if(!state.social.conversations.length){
+        loadSocialData().catch(()=>{});
+      }
+    }
+    function initSocialUI(){
+      $$('[data-social-tab]').forEach(b=>b.addEventListener("click",()=>setSocialTab(b.dataset.socialTab)));
+      el("usernameSearchBtn").addEventListener("click",runUsernameSearch); el("usernameSearch").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();runUsernameSearch();}});
+      el("chatForm").addEventListener("submit",async e=>{e.preventDefault();await sendChatMessage();}); el("chatInput").addEventListener("keydown",async e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();await sendChatMessage();}}); el("chatInput").addEventListener("input",autoGrowChatInput); el("chatBackBtn").addEventListener("click",closeChat);
+      document.addEventListener("click",async e=>{
+        const node=e.target.closest("[data-social-action]"); if(!node)return; const action=node.dataset.socialAction;
+        try{
+          if(action==="chat")await openChat(node.dataset.uid); else if(action==="add"){const u=state.social.searchUser;if(u)await sendFriendRequest(u);} else if(action==="accept")await acceptFriendRequest(node.dataset.id); else if(action==="reject")await rejectFriendRequest(node.dataset.id); else if(action==="cancel")await cancelFriendRequest(node.dataset.id); else if(action==="remove-friend"){const f=state.social.friends.map(friendOther).find(x=>x.uid===node.dataset.uid);if(f)await removeFriend(f);}
+        }catch(err){toast(err.message||"Không thể thực hiện thao tác.");}
+      });
+      renderSocial();
+    }
+    async function runUsernameSearch(){
+      const q=normalizeUsername(el("usernameSearch").value); if(!q){state.social.searchUser=null;renderSearchResult();return;} if(!isValidUsername(q)){toast("Username phải là 3–20 ký tự gồm chữ cái, số hoặc _.");return;}
+      try{const user=await getUsernameIndex(q); state.social.searchUser=user?{uid:String(user.uid),username:normalizeUsername(user.username||q),displayName:String(user.displayName||"Người dùng"),avatar:String(user.avatar||"")}:null;renderSearchResult();if(!state.social.searchUser)toast("Không tìm thấy người dùng.");}
+      catch(err){toast(err.message||"Không thể tìm username lúc này.");}
+    }
+
+    /* =========================================================
+       6. PROFILE / THEME
+       ========================================================= */
+    function applyProfileTheme(){
+      state.profile=normalizeProfile(state.profile); const p=state.profile;
+      document.body.classList.toggle("dark",!!p.darkMode);
+      document.documentElement.style.setProperty("--primary",p.primaryColor||"#EC4899");
+      document.documentElement.style.setProperty("--primary-soft",p.primaryColor||"#F472B6");
+      document.documentElement.style.setProperty("--primary-pale",p.darkMode?"rgba(236,72,153,.16)":"#FCE7F3");
+      el("darkSwitch").checked=!!p.darkMode; el("notifSwitch").checked=p.notificationsEnabled!==false; el("reminderMinutes").value=String(p.reminderMinutes||60);
+      el("profileName").value=p.displayName||p.name||"Edu Student"; el("profileUsername").value=p.username||""; el("profileAvatar").value=p.avatar||""; el("profileColor").value=p.primaryColor||"#EC4899";
+      setAvatar(el("sideAvatar"),{displayName:p.displayName,username:p.username,avatar:p.avatar},"E");
+      el("sideName").textContent=p.displayName||"Edu Student"; el("sideEmail").textContent=state.user?.email||"offline@local";
+      el("topbarTitle").textContent=titleMap[state.view]||"Dashboard";
+      updateSocialSyncBadge();
+      syncLocalPublicUser();
+    }
+    async function updateProfile(patch){
+      state.profile=normalizeProfile({...state.profile,...patch,updatedAt:nowISO()}); await saveDoc("profile","main",state.profile); applyProfileTheme();
+    }
+    el("themeBtn").addEventListener("click",()=>updateProfile({darkMode:!state.profile.darkMode}));
+    el("darkSwitch").addEventListener("change",e=>updateProfile({darkMode:e.target.checked}));
+    el("notifSwitch").addEventListener("change",e=>updateProfile({notificationsEnabled:e.target.checked}));
+    el("reminderMinutes").addEventListener("change",e=>updateProfile({reminderMinutes:Number(e.target.value)||60}));
+    el("profileForm").addEventListener("submit",async e=>{
+      e.preventDefault();
+      try{
+        const newName=el("profileName").value.trim()||"Edu Student", newUsername=normalizeUsername(el("profileUsername").value), newAvatar=el("profileAvatar").value.trim(), newColor=el("profileColor").value;
+        const userr=usernameError(newUsername); if(userr)throw new Error(userr);
+        const safeAvatar=newAvatar?normalizeHttpUrl(newAvatar):""; if(newAvatar && !safeAvatar)throw new Error("Avatar URL không hợp lệ. Chỉ cho phép http/https.");
+        if(newUsername!==normalizeUsername(state.profile.username||"")) await claimUsernameAndProfile(newUsername,{displayName:newName,avatar:safeAvatar,primaryColor:newColor});
+        else await updateProfile({displayName:newName,avatar:safeAvatar,primaryColor:newColor});
+        if(firebaseReady && auth?.currentUser && auth.currentUser.displayName!==newName) await auth.currentUser.updateProfile({displayName:newName}).catch(()=>{});
+        syncLocalPublicUser(); toast("Đã lưu hồ sơ.");
+      }catch(err){toast(err.message||"Không thể lưu hồ sơ.");}
+    });
+    async function performLogout(){
+      stopTimer(false); unsubscribeSocial();
+      if(firebaseReady && auth?.currentUser){
+        try{ await auth.signOut(); }
+        catch(err){ toast(err.message||"Không thể đăng xuất."); }
+      }else clearUIForLogout();
+    }
+    el("sidebarLogout").addEventListener("click",performLogout);
+    el("settingsLogoutBtn")?.addEventListener("click",performLogout);
+
+    /* =========================================================
+       7. NAV
+       ========================================================= */
+    const titleMap={
+      dashboard:"Dashboard",calendar:"Lịch / Calendar",schedule:"Thời khóa biểu",tasks:"Bài tập",
+      exams:"Bài kiểm tra",grades:"Điểm số",documents:"Tài liệu",pomodoro:"Pomodoro",
+      goals:"Mục tiêu",notes:"Ghi chú",stats:"Thống kê",settings:"Cài đặt & Chia sẻ"
+    };
+    function navigate(view){
+      state.view=view;
+      $$(".view").forEach(v=>v.classList.toggle("active",v.id===`view-${view}`));
+      $$(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+      $$(".mobile-nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+      el("topbarTitle").textContent=titleMap[view]||view;
+      if(view==="dashboard") renderDashboard();
+      if(view==="calendar") renderCalendar();
+      if(view==="schedule") renderSchedule();
+      if(view==="tasks") renderTasks();
+      if(view==="exams") renderExams();
+      if(view==="grades") renderGrades();
+      if(view==="documents") renderDocuments();
+      if(view==="pomodoro") renderPomodoro();
+      if(view==="goals") renderGoals();
+      if(view==="notes") renderNotes();
+      if(view==="stats") renderStats();
+      if(view==="settings"){renderSettingsShares();renderSocial();}
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
+    $$(".nav-btn").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.view)));
+    $$("[data-view-jump]").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.viewJump)));
+
+    $("#mobileMenuBtn").addEventListener("click",()=>{
+      // Mobile-friendly quick drawer using a lightweight prompt-like sheet.
+      const names=[
+        ["dashboard","⌂ Dashboard"],["calendar","▣ Lịch"],["schedule","◫ Thời khóa biểu"],["tasks","✓ Bài tập"],
+        ["exams","⌁ Kiểm tra"],["grades","◈ Điểm"],["documents","▤ Tài liệu"],["pomodoro","◷ Pomodoro"],
+        ["goals","◎ Mục tiêu"],["notes","✎ Ghi chú"],["stats","▥ Thống kê"],["settings","⚙ Cài đặt"]
+      ];
+      const html=names.map(([v,n])=>`<button class="btn ${state.view===v?"btn-primary":""}" style="justify-content:flex-start" data-drawer-view="${v}">${n}</button>`).join("");
+      openModal("Điều hướng",{kind:"custom",html:`<div style="display:grid;gap:8px">${html}</div>`},null);
+      $$("[data-drawer-view]").forEach(b=>b.addEventListener("click",()=>{closeModal();navigate(b.dataset.drawerView)}));
+    });
+
+    /* =========================================================
+       8. SUBJECT SELECTORS
+       ========================================================= */
+    function populateSubjectSelectors(){
+      const subjects=state.subjects;
+      ["taskSubjectFilter","taskSubject","examSubject","gradeSubject","pomodoroSubject","noteSubject","scheduleSubject"].forEach(id=>{
+        const node=el(id); if(!node)return;
+        const current=node.value;
+        node.innerHTML=`<option value="">${id==="taskSubjectFilter"?"Mọi môn học":"Chọn môn học"}</option>`+
+          subjects.map(s=>`<option value="${s.id}">${escapeHTML(s.name)}</option>`).join("");
+        node.value=current;
+      });
+      if(el("taskSubjectFilter")) el("taskSubjectFilter").innerHTML=`<option value="">Mọi môn học</option>`+subjects.map(s=>`<option value="${s.id}">${escapeHTML(s.name)}</option>`).join("");
+    }
+
+    /* =========================================================
+       9. GENERIC RENDER
+       ========================================================= */
+    function renderAll(){
+      applyProfileTheme();
+      populateSubjectSelectors();
+      renderDashboard(); renderCalendar(); renderSchedule(); renderTasks(); renderExams();
+      renderGrades(); renderDocuments(); renderPomodoro(); renderGoals(); renderNotes(); renderStats(); renderSettingsShares();
+      renderNotifications();
+    }
+
+    /* =========================================================
+       10. DASHBOARD
+       ========================================================= */
+    function taskStats(){
+      const total=state.tasks.length;
+      const done=state.tasks.filter(t=>t.status==="Hoàn thành").length;
+      const overdue=state.tasks.filter(t=>t.status!=="Hoàn thành" && t.deadline && new Date(t.deadline)<new Date()).length;
+      return {total,done,overdue,pct:total?Math.round(done/total*100):0};
+    }
+    function gradeOverall(){
+      const valid=state.grades.filter(g=>Number.isFinite(Number(g.score)));
+      if(!valid.length)return 0;
+      const sum=valid.reduce((a,g)=>a+Number(g.score)*(Number(g.weight)||1),0);
+      const w=valid.reduce((a,g)=>a+(Number(g.weight)||1),0);
+      return w?sum/w:0;
+    }
+    function scheduleForDate(date){
+      const dow=date.getDay(); // 0 sun
+      return state.schedule.filter(s=>Number(s.day)===dow).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+    }
+
+    function renderDashboard(){
+      const ts=taskStats();
+      const upcomingExams=state.exams.filter(e=>e.datetime && new Date(e.datetime)>=new Date()).sort((a,b)=>new Date(a.datetime)-new Date(b.datetime));
+      const deadlines=state.tasks.filter(t=>t.status!=="Hoàn thành" && t.deadline).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));
+      el("greeting").textContent=`${greeting()}, ${state.profile.name?.split(" ").slice(-1)[0]||"bạn"} 👋`;
+      el("todayText").textContent=new Date().toLocaleDateString("vi-VN",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
+
+      el("dashboardStats").innerHTML=[
+        ["✓","Hoàn thành",`${ts.done}/${ts.total}`,`Tiến độ ${ts.pct}%`],
+        ["⏰","Quá hạn",ts.overdue,ts.overdue?"Cần xử lý":"Không có"],
+        ["◈","Điểm TB",gradeOverall().toFixed(2),"Theo trọng số"],
+        ["◷","Focus",fmtMinutes(state.studySessions.reduce((a,s)=>a+(Number(s.minutes)||0),0)),"Tổng phiên học"]
+      ].map(([ico,label,val,sub])=>`<div class="card stat"><div><div class="muted tiny">${label}</div><div class="value">${val}</div><div class="muted tiny">${sub}</div></div><div class="ico">${ico}</div></div>`).join("");
+
+      const sch=scheduleForDate(new Date());
+      el("todaySchedule").innerHTML=sch.length?sch.map(s=>`
+        <div class="timeline-row">
+          <div class="time-label">${escapeHTML(s.time||"--:--")}</div>
+          <div class="schedule-block" style="border-left-color:${escapeHTML(s.color||subjectColor(s.subjectId))}">
+            <b>${escapeHTML(subjectName(s.subjectId))}</b>
+            <small>${escapeHTML(s.teacher||"")} · ${escapeHTML(s.room||"")}</small>
+          </div>
+        </div>`).join(""):`<div class="empty">Hôm nay chưa có lịch học.</div>`;
+
+      const tasks=state.tasks.filter(t=>t.status!=="Hoàn thành").sort((a,b)=>(b.priority==="Cao")-(a.priority==="Cao") || new Date(a.deadline||"2999-01-01")-new Date(b.deadline||"2999-01-01")).slice(0,5);
+      el("dashboardTasks").innerHTML=tasks.length?tasks.map(taskItemHTML).join(""):`<div class="empty">Không còn việc cần làm 🎉</div>`;
+
+      const ds=deadlines.slice(0,5);
+      el("dashboardDeadlines").innerHTML=ds.length?ds.map(t=>deadlineItemHTML(t)).join(""):`<div class="empty">Không có deadline gần.</div>`;
+      el("dashboardExams").innerHTML=upcomingExams.slice(0,5).map(examItemHTML).join("")||`<div class="empty">Chưa có bài kiểm tra sắp tới.</div>`;
+    }
+    function greeting(){
+      const h=new Date().getHours();
+      return h<12?"Chào buổi sáng":h<18?"Chào buổi chiều":"Chào buổi tối";
+    }
+
+    function taskItemHTML(t){
+      const sub=subjectName(t.subjectId);
+      const badge=t.priority==="Cao"?"badge-red":t.priority==="Trung bình"?"badge-yellow":"badge-green";
+      return `<div class="item">
+        <button class="icon-btn" style="width:30px;height:30px" onclick="Edu.toggleTask('${t.id}')">${t.status==="Hoàn thành"?"✓":"○"}</button>
+        <div class="item-main">
+          <div class="item-title">${escapeHTML(t.title)}</div>
+          <div class="item-sub">${escapeHTML(sub)} · ${t.deadline?fmtDateTime(t.deadline):"Không deadline"}</div>
+        </div>
+        <span class="badge ${badge}">${escapeHTML(t.priority||"Trung bình")}</span>
+      </div>`;
+    }
+    function deadlineItemHTML(t){
+      const overdue=t.deadline && new Date(t.deadline)<new Date();
+      return `<div class="item"><div class="item-main">
+        <div class="item-title">${escapeHTML(t.title)}</div>
+        <div class="item-sub">${escapeHTML(subjectName(t.subjectId))}</div>
+      </div><span class="badge ${overdue?"badge-red":"badge-violet"}">${overdue?"Quá hạn":"Hạn "+fmtDate(t.deadline,{day:"2-digit",month:"2-digit"})}</span></div>`;
+    }
+    function examItemHTML(e){
+      return `<div class="item"><div class="item-main">
+        <div class="item-title">${escapeHTML(e.title)}</div>
+        <div class="item-sub">${escapeHTML(subjectName(e.subjectId))} · ${fmtDateTime(e.datetime)}</div>
+      </div><span class="badge badge-pink" data-countdown="${escapeHTML(e.datetime)}">...</span></div>`;
+    }
+
+    /* =========================================================
+       11. CALENDAR
+       ========================================================= */
+    function calendarActivities(){
+      const map={};
+      state.tasks.forEach(t=>{if(t.deadline){const k=dateKey(t.deadline);(map[k]??=[]).push({type:"task",title:t.title});}});
+      state.exams.forEach(e=>{if(e.datetime){const k=dateKey(e.datetime);(map[k]??=[]).push({type:"exam",title:e.title});}});
+      for(let i=0;i<31;i++){
+        const d=addDays(new Date(),i); scheduleForDate(d).forEach(s=>{const k=dateKey(d);(map[k]??=[]).push({type:"schedule",title:subjectName(s.subjectId)});});
+      }
+      return map;
+    }
+    function renderCalendar(){
+      const d=new Date(state.calDate); d.setDate(1);
+      const y=d.getFullYear(),m=d.getMonth();
+      el("calMonthLabel").textContent=d.toLocaleDateString("vi-VN",{month:"long",year:"numeric"});
+      const firstDay=(d.getDay()+6)%7;
+      const daysInMonth=new Date(y,m+1,0).getDate();
+      const total=Math.ceil((firstDay+daysInMonth)/7)*7;
+      const acts=calendarActivities();
+      const labels=["T2","T3","T4","T5","T6","T7","CN"];
+      let html=labels.map(x=>`<div class="weekday">${x}</div>`).join("");
+      for(let i=0;i<total;i++){
+        const dayNum=i-firstDay+1;
+        if(dayNum<1||dayNum>daysInMonth){html+=`<div class="day-cell" style="opacity:.35"></div>`;continue;}
+        const date=new Date(y,m,dayNum); const k=dateKey(date);
+        const isToday=k===dateKey(new Date());
+        const events=(acts[k]||[]).slice(0,4);
+        html+=`<div class="day-cell ${isToday?"today":""}" data-cal-day="${k}">
+          <div class="day-num">${dayNum}</div>
+          <div class="day-events">
+            ${events.map(a=>`<div class="cal-event" style="background:${a.type==="exam"?"#EDE9FE":a.type==="task"?"var(--primary-pale)":"var(--success-soft)"};color:${a.type==="exam"?"#6D28D9":a.type==="task"?"#BE185D":"#0F766E"}">${escapeHTML(a.title)}</div>`).join("")}
+          </div>
+        </div>`;
+      }
+      el("calendarGrid").innerHTML=html;
+      $$("[data-cal-day]").forEach(c=>c.addEventListener("click",()=>{
+        const k=c.dataset.calDay, d=new Date(k+"T00:00:00");
+        openDayActivity(d);
+      }));
+    }
+    $("#calPrev").addEventListener("click",()=>{state.calDate.setMonth(state.calDate.getMonth()-1);renderCalendar();});
+    $("#calNext").addEventListener("click",()=>{state.calDate.setMonth(state.calDate.getMonth()+1);renderCalendar();});
+    $("#calToday").addEventListener("click",()=>{state.calDate=new Date();renderCalendar();});
+
+    function openDayActivity(date){
+      const k=dateKey(date);
+      const ts=state.tasks.filter(t=>t.deadline&&dateKey(t.deadline)===k);
+      const ex=state.exams.filter(e=>e.datetime&&dateKey(e.datetime)===k);
+      const sc=scheduleForDate(date);
+      const html=`
+        <div class="help-box"><b>${date.toLocaleDateString("vi-VN",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"})}</b></div>
+        <div class="list" style="margin-top:12px">
+          ${sc.map(s=>`<div class="item"><div class="item-main"><div class="item-title">◫ ${escapeHTML(subjectName(s.subjectId))}</div><div class="item-sub">${escapeHTML(s.time||"")} · ${escapeHTML(s.room||"")} · ${escapeHTML(s.teacher||"")}</div></div></div>`).join("")}
+          ${ts.map(t=>`<div class="item"><div class="item-main"><div class="item-title">✓ ${escapeHTML(t.title)}</div><div class="item-sub">${escapeHTML(subjectName(t.subjectId))}</div></div><span class="badge badge-pink">Bài tập</span></div>`).join("")}
+          ${ex.map(e=>`<div class="item"><div class="item-main"><div class="item-title">⌁ ${escapeHTML(e.title)}</div><div class="item-sub">${escapeHTML(subjectName(e.subjectId))} · ${fmtDateTime(e.datetime)}</div></div><span class="badge badge-violet">Kiểm tra</span></div>`).join("")}
+          ${!sc.length&&!ts.length&&!ex.length?`<div class="empty">Không có hoạt động.</div>`:""}
+        </div>`;
+      openModal("Hoạt động trong ngày",{kind:"custom",html},null);
+    }
+
+    /* =========================================================
+       12. SCHEDULE
+       ========================================================= */
+    function renderSchedule(){
+      const start=new Date(state.scheduleWeekStart);
+      const end=addDays(start,6);
+      el("scheduleRange").textContent=`${fmtDate(start,{day:"2-digit",month:"2-digit"})} — ${fmtDate(end,{day:"2-digit",month:"2-digit",year:"numeric"})}`;
+      let html="";
+      const names=["Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ nhật"];
+      for(let i=0;i<7;i++){
+        const d=addDays(start,i), dow=(i+1)%7;
+        const rows=state.schedule.filter(s=>Number(s.day)===dow).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+        html+=`<div class="day-column"><h4>${names[i]} · ${d.getDate()}/${d.getMonth()+1}</h4>
+          ${rows.length?rows.map(s=>`<div class="schedule-block" style="border-left-color:${escapeHTML(s.color||subjectColor(s.subjectId))}">
+            <b>${escapeHTML(subjectName(s.subjectId))}</b>
+            <small>${escapeHTML(s.time||"--:--")} · ${escapeHTML(s.room||"")}</small>
+            <small>${escapeHTML(s.teacher||"")}</small>
+            <div class="item-actions" style="margin-top:7px">
+              <button class="btn btn-sm" onclick="Edu.edit('schedule','${s.id}')">Sửa</button>
+              <button class="btn btn-sm btn-danger" onclick="Edu.del('schedule','${s.id}')">Xóa</button>
+            </div>
+          </div>`).join(""):`<div class="empty">Trống</div>`}
+        </div>`;
+      }
+      el("scheduleWeek").innerHTML=html;
+    }
+    $("#schedulePrev").addEventListener("click",()=>{state.scheduleWeekStart=addDays(state.scheduleWeekStart,-7);renderSchedule();});
+    $("#scheduleNext").addEventListener("click",()=>{state.scheduleWeekStart=addDays(state.scheduleWeekStart,7);renderSchedule();});
+    $("#scheduleThisWeek").addEventListener("click",()=>{state.scheduleWeekStart=mondayOf(new Date());renderSchedule();});
+
+    /* =========================================================
+       13. TASKS
+       ========================================================= */
+    function filteredTasks(){
+      let rows=[...state.tasks];
+      const q=el("globalSearch").value.trim().toLowerCase();
+      const status=el("taskStatusFilter").value, subject=el("taskSubjectFilter").value;
+      const priority=el("taskPriorityFilter").value, df=el("taskDeadlineFilter").value;
+      if(status) rows=rows.filter(t=>t.status===status);
+      if(subject) rows=rows.filter(t=>t.subjectId===subject);
+      if(priority) rows=rows.filter(t=>t.priority===priority);
+      const today=new Date();
+      if(df==="overdue") rows=rows.filter(t=>t.deadline&&new Date(t.deadline)<today&&t.status!=="Hoàn thành");
+      if(df==="7") rows=rows.filter(t=>t.deadline && new Date(t.deadline)>=today && new Date(t.deadline)<=addDays(today,7));
+      if(df==="30") rows=rows.filter(t=>t.deadline && new Date(t.deadline)>=today && new Date(t.deadline)<=addDays(today,30));
+      if(q) rows=rows.filter(t=>`${t.title} ${t.description||""} ${subjectName(t.subjectId)}`.toLowerCase().includes(q));
+      return rows.sort((a,b)=>new Date(a.deadline||"2999-01-01")-new Date(b.deadline||"2999-01-01"));
+    }
+    function renderTasks(){
+      const rows=filteredTasks();
+      el("tasksList").innerHTML=rows.length?rows.map(t=>`
+        <div class="item">
+          <button class="icon-btn" style="width:34px;height:34px" onclick="Edu.toggleTask('${t.id}')">${t.status==="Hoàn thành"?"✓":"○"}</button>
+          <div class="item-main">
+            <div class="item-title">${escapeHTML(t.title)}</div>
+            <div class="item-sub">${escapeHTML(subjectName(t.subjectId))} · ${t.deadline?fmtDateTime(t.deadline):"Không deadline"} · ${escapeHTML(t.status||"Chưa làm")}</div>
+            ${t.description?`<div class="item-sub">${escapeHTML(t.description)}</div>`:""}
+          </div>
+          <span class="badge ${t.priority==="Cao"?"badge-red":t.priority==="Trung bình"?"badge-yellow":"badge-green"}">${escapeHTML(t.priority||"Trung bình")}</span>
+          <div class="item-actions">
+            <button class="btn btn-sm" onclick="Edu.edit('task','${t.id}')">Sửa</button>
+            <button class="btn btn-sm btn-danger" onclick="Edu.del('task','${t.id}')">Xóa</button>
+          </div>
+        </div>`).join(""):`<div class="empty">Không tìm thấy bài tập.</div>`;
+    }
+    ["taskStatusFilter","taskSubjectFilter","taskPriorityFilter","taskDeadlineFilter"].forEach(id=>el(id).addEventListener("change",renderTasks));
+
+    window.Edu={};
+
+    Edu.toggleTask=async id=>{
+      const t=state.tasks.find(x=>x.id===id); if(!t)return;
+      t.status=t.status==="Hoàn thành"?"Đang làm":"Hoàn thành";
+      await saveCollectionRow("tasks",t,id); state.tasks=lsRead("tasks");
+      renderAll(); toast("Đã cập nhật trạng thái.");
+    };
+
+    /* =========================================================
+       14. EXAMS
+       ========================================================= */
+    function countdownText(datetime){
+      const diff=new Date(datetime)-new Date();
+      if(diff<=0)return "Đã bắt đầu / đã qua";
+      const mins=Math.floor(diff/60000), days=Math.floor(mins/1440), hrs=Math.floor((mins%1440)/60), m=mins%60;
+      return days?`Còn ${days}d ${hrs}h`:hrs?`Còn ${hrs}h ${m}m`:`Còn ${m}m`;
+    }
+    function renderExams(){
+      const rows=[...state.exams].sort((a,b)=>new Date(a.datetime||"2999")-new Date(b.datetime||"2999"));
+      el("examsList").innerHTML=rows.length?rows.map(e=>`
+        <div class="item">
+          <div class="item-main">
+            <div class="item-title">${escapeHTML(e.title)}</div>
+            <div class="item-sub">${escapeHTML(subjectName(e.subjectId))} · ${fmtDateTime(e.datetime)} · ${escapeHTML(e.type||"Khác")}</div>
+            ${e.scope?`<div class="item-sub">Phạm vi: ${escapeHTML(e.scope)}</div>`:""}
+          </div>
+          <span class="badge badge-violet" data-countdown="${escapeHTML(e.datetime)}">${countdownText(e.datetime)}</span>
+          <div class="item-actions"><button class="btn btn-sm" onclick="Edu.edit('exam','${e.id}')">Sửa</button><button class="btn btn-sm btn-danger" onclick="Edu.del('exam','${e.id}')">Xóa</button></div>
+        </div>`).join(""):`<div class="empty">Chưa có bài kiểm tra.</div>`;
+    }
+    setInterval(()=>$$("[data-countdown]").forEach(n=>n.textContent=countdownText(n.dataset.countdown)),1000);
+
+    /* =========================================================
+       15. GRADES
+       ========================================================= */
+    function subjectAverage(subjectId, term=""){
+      const rows=state.grades.filter(g=>g.subjectId===subjectId && (!term||g.term===term));
+      const totalWeight=rows.reduce((a,g)=>a+(Number(g.weight)||1),0);
+      return totalWeight ? rows.reduce((a,g)=>a+Number(g.score)*(Number(g.weight)||1),0)/totalWeight : 0;
+    }
+    function renderGrades(){
+      const terms=[...new Set(state.grades.map(g=>g.term).filter(Boolean))];
+      const summarySubjects=state.subjects.map(s=>({s,avg:subjectAverage(s.id)})).filter(x=>state.grades.some(g=>g.subjectId===x.s.id));
+      el("gradeSummary").innerHTML=[
+        ["Điểm TB tích lũy",gradeOverall().toFixed(2),"Tất cả điểm"],
+        ["Số môn có điểm",summarySubjects.length,`/${state.subjects.length} môn`],
+        ["Học kỳ",terms.sort().at(-1)||"—","Theo dữ liệu hiện có"]
+      ].map(([a,b,c])=>`<div class="card"><div class="muted tiny">${a}</div><div class="value" style="font-size:25px;margin-top:4px;font-weight:950">${b}</div><div class="muted tiny">${c}</div></div>`).join("");
+
+      el("gradesList").innerHTML=summarySubjects.map(({s,avg})=>`
+        <div class="item">
+          <span class="subject-dot" style="background:${escapeHTML(s.color||"#EC4899")}"></span>
+          <div class="item-main"><div class="item-title">${escapeHTML(s.name)}</div><div class="item-sub">TB môn: <b>${avg.toFixed(2)}</b></div></div>
+          <div style="width:160px"><div class="progress"><i style="width:${clamp(avg/10*100,0,100)}%"></i></div></div>
+          <button class="btn btn-sm" onclick="Edu.quickGradeSubject('${s.id}')">＋ Điểm</button>
+        </div>
+        <div style="margin-left:20px;margin-top:-4px;margin-bottom:6px">${state.grades.filter(g=>g.subjectId===s.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(g=>`
+          <div class="item" style="margin-top:6px;background:var(--surface-2)">
+            <div class="item-main"><div class="item-title">${escapeHTML(g.type||"Điểm")} · ${escapeHTML(g.term||"")}</div><div class="item-sub">Hệ số ${Number(g.weight)||1}</div></div>
+            <b>${Number(g.score).toFixed(2)}</b>
+            <button class="btn btn-sm" onclick="Edu.edit('grade','${g.id}')">Sửa</button>
+            <button class="btn btn-sm btn-danger" onclick="Edu.del('grade','${g.id}')">Xóa</button>
+          </div>`).join("")}</div>
+      `).join("")||`<div class="empty">Chưa có dữ liệu điểm.</div>`;
+    }
+    Edu.quickGradeSubject=id=>{openModal("Thêm điểm",{kind:"grade",preset:{subjectId:id}},null);};
+
+    /* =========================================================
+       16. DOCUMENTS
+       ========================================================= */
+    function renderDocuments(){
+      const systemSubjects=[...state.subjects].sort((a,b)=>String(a.name).localeCompare(String(b.name),"vi"));
+      el("systemSubjectsList").innerHTML=systemSubjects.length?systemSubjects.map(s=>`
+        <div class="item">
+          <span class="subject-dot" style="background:${escapeHTML(s.color||"#EC4899")}"></span>
+          <div class="item-main">
+            <div class="item-title">${escapeHTML(s.name)}</div>
+            <div class="item-sub">${escapeHTML(s.description||"Môn học dùng chung trong toàn app.")}</div>
+          </div>
+          <button class="btn btn-sm" onclick="Edu.edit('subject','${s.id}')">Sửa</button>
+          <button class="btn btn-sm btn-danger" onclick="Edu.del('subject','${s.id}')">Xóa</button>
+        </div>`).join(""):`<div class="empty">Chưa có môn học. Bấm “Tạo môn học” để thêm.</div>`;
+
+      const cards=state.documentSubjects.map(s=>{
+        const mats=state.materialsBySubject[s.id]||[];
+        return `<div class="card">
+          <div class="section-title">
+            <span><span class="subject-dot" style="background:${escapeHTML(s.color||"#EC4899")}"></span>${escapeHTML(s.name)}</span>
+            <div class="inline">
+              <button class="btn btn-sm" onclick="Edu.edit('docSubject','${s.id}')">Sửa</button>
+              <button class="btn btn-sm btn-danger" onclick="Edu.del('docSubject','${s.id}')">Xóa</button>
+            </div>
+          </div>
+          ${s.description?`<div class="muted tiny" style="margin-bottom:8px">${escapeHTML(s.description)}</div>`:""}
+          <div class="list">
+            ${mats.length?mats.map(m=>`<div class="item">
+              <div class="item-main"><div class="item-title">📄 ${escapeHTML(m.title)}</div><div class="item-sub">${escapeHTML(m.description||"")}</div></div>
+              <div class="item-actions">
+                <a class="btn btn-sm" href="${escapeHTML(m.url)}" target="_blank" rel="noopener">Mở</a>
+                <button class="btn btn-sm" onclick="Edu.editMaterial('${s.id}','${m.id}')">Sửa</button>
+                <button class="btn btn-sm btn-danger" onclick="Edu.delMaterial('${s.id}','${m.id}')">Xóa</button>
+              </div>
+            </div>`).join(""):`<div class="empty">Chưa có tài liệu.</div>`}
+          </div>
+          <button class="btn btn-sm" style="margin-top:9px;width:100%" onclick="Edu.addMaterial('${s.id}')">＋ Thêm tài liệu vào môn này</button>
+        </div>`;
+      });
+      el("docSubjectsList").innerHTML=cards.join("")||`<div class="empty" style="grid-column:1/-1">Chưa có môn tài liệu. Tạo môn đầu tiên để lưu link PDF/Drive đúng sub-collection.</div>`;
+    }
+    Edu.addMaterial=subjectId=>openModal("Thêm tài liệu",{kind:"material",preset:{subjectId}},null);
+    Edu.editMaterial=(subjectId,id)=>{
+      const row=(state.materialsBySubject[subjectId]||[]).find(m=>m.id===id); if(!row)return;
+      openModal("Sửa tài liệu",{kind:"material",preset:row,subjectId},id);
+    };
+    Edu.delMaterial=async(subjectId,id)=>{if(!confirm("Xóa tài liệu này?"))return;await deleteMaterial(subjectId,id);renderDocuments();toast("Đã xóa tài liệu.");};
+
+    /* =========================================================
+       17. POMODORO / STUDY TIME
+       ========================================================= */
+    function renderPomodoro(){
+      el("pomodoroStats").innerHTML=[
+        ["Phiên hoàn thành",state.pomodoros.filter(p=>p.completed).length],
+        ["Thời gian học",fmtMinutes(state.studySessions.reduce((a,s)=>a+Number(s.minutes||0),0))],
+        ["Hôm nay",fmtMinutes(state.studySessions.filter(s=>dateKey(s.startedAt)===dateKey(new Date())).reduce((a,s)=>a+Number(s.minutes||0),0))]
+      ].map(([a,b])=>`<div><div class="muted tiny">${a}</div><b style="font-size:20px">${b}</b></div>`).join("");
+      const rows=[...state.pomodoros].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,10);
+      el("pomodoroHistory").innerHTML=rows.map(p=>`<div class="item">
+        <div class="item-main"><div class="item-title">${p.completed?"✓":"○"} ${escapeHTML(subjectName(p.subjectId))}</div><div class="item-sub">${fmtDateTime(p.createdAt)} · ${p.minutes} phút</div></div>
+        <span class="badge ${p.completed?"badge-green":"badge-yellow"}">${p.completed?"Hoàn thành":"Dở dang"}</span>
+      </div>`).join("")||`<div class="empty">Chưa có phiên học.</div>`;
+    }
+
+    function syncTimerInputs(){
+      const fm=Math.max(1,Number(el("focusMinutes").value)||25);
+      const bm=Math.max(1,Number(el("breakMinutes").value)||5);
+      state.timer.focusMinutes=fm; state.timer.breakMinutes=bm;
+      if(!state.timer.running && state.timer.mode==="Focus"){
+        state.timer.total=fm*60; state.timer.remaining=fm*60;
+      }
+      updateTimerUI();
+    }
+    function updateTimerUI(){
+      const t=state.timer;
+      const m=Math.floor(t.remaining/60), s=t.remaining%60;
+      el("timerText").textContent=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+      el("timerMode").textContent=t.mode;
+      const pct=t.total?clamp(t.remaining/t.total*100,0,100):100;
+      el("timerRing").style.setProperty("--pct",`${pct}%`);
+    }
+    function startTimer(){
+      if(state.timer.running)return;
+      state.timer.running=true;
+      state.timer.startedAt=state.timer.startedAt||new Date();
+      state.timer.interval=setInterval(async()=>{
+        state.timer.remaining--;
+        updateTimerUI();
+        if(state.timer.remaining<=0){
+          await finishTimer();
+        }
+      },1000);
+      renderPomodoro();
+    }
+    function stopTimer(render=true){
+      if(state.timer.interval)clearInterval(state.timer.interval);
+      state.timer.interval=null; state.timer.running=false;
+      if(render)renderPomodoro();
+    }
+    async function finishTimer(){
+      stopTimer(false);
+      if(state.timer.mode==="Focus"){
+        const minutes=state.timer.focusMinutes;
+        const record={subjectId:state.timer.subjectId,minutes,completed:true,startedAt:state.timer.startedAt?.toISOString()||nowISO()};
+        const saved=await saveCollectionRow("pomodoros",{...record,createdAt:nowISO()});
+        state.pomodoros=lsRead("pomodoros");
+        await saveCollectionRow("studySessions",{subjectId:state.timer.subjectId,minutes,startedAt:record.startedAt,createdAt:nowISO()});
+        state.studySessions=lsRead("studySessions");
+        toast("Hoàn thành một phiên Focus! 🎉");
+        state.timer.mode="Break";
+        state.timer.total=state.timer.breakMinutes*60; state.timer.remaining=state.timer.total; state.timer.startedAt=null;
+      }else{
+        toast("Hết giờ nghỉ. Quay lại Focus nhé.");
+        state.timer.mode="Focus";
+        state.timer.total=state.timer.focusMinutes*60; state.timer.remaining=state.timer.total; state.timer.startedAt=null;
+      }
+      updateTimerUI(); renderPomodoro(); renderDashboard(); renderStats();
+    }
+    $("#focusMinutes").addEventListener("input",syncTimerInputs);
+    $("#breakMinutes").addEventListener("input",syncTimerInputs);
+    $("#pomodoroSubject").addEventListener("change",e=>state.timer.subjectId=e.target.value);
+    $("#timerStart").addEventListener("click",startTimer);
+    $("#timerPause").addEventListener("click",()=>stopTimer());
+    $("#timerReset").addEventListener("click",()=>{stopTimer(false);state.timer.mode="Focus";state.timer.total=(Number(el("focusMinutes").value)||25)*60;state.timer.remaining=state.timer.total;state.timer.startedAt=null;updateTimerUI();});
+    $("#pomodoroSubject").value=state.timer.subjectId;
+
+    /* =========================================================
+       18. GOALS
+       ========================================================= */
+    function goalPct(g){return clamp(Number(g.progress)||0,0,100);}
+    function renderGoals(){
+      el("goalsList").innerHTML=[...state.goals].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(g=>`
+        <div class="card">
+          <div class="section-title"><span>${escapeHTML(g.title)}</span><span class="badge ${g.period==="Ngày"?"badge-green":g.period==="Tuần"?"badge-pink":"badge-violet"}">${escapeHTML(g.period)}</span></div>
+          <div class="muted tiny">${escapeHTML(g.description||"")}</div>
+          <div style="margin:14px 0 7px;display:flex;justify-content:space-between"><span class="muted tiny">Tiến độ</span><b>${goalPct(g)}%</b></div>
+          <div class="progress"><i style="width:${goalPct(g)}%"></i></div>
+          <div class="page-actions" style="margin-top:11px">
+            <button class="btn btn-sm" onclick="Edu.incrementGoal('${g.id}',10)">+10%</button>
+            <button class="btn btn-sm" onclick="Edu.edit('goal','${g.id}')">Sửa</button>
+            <button class="btn btn-sm btn-danger" onclick="Edu.del('goal','${g.id}')">Xóa</button>
+          </div>
+        </div>`).join("")||`<div class="empty" style="grid-column:1/-1">Chưa có mục tiêu.</div>`;
+    }
+    Edu.incrementGoal=async(id,add)=>{
+      const g=state.goals.find(x=>x.id===id);if(!g)return;
+      g.progress=clamp((Number(g.progress)||0)+add,0,100);
+      await saveCollectionRow("goals",g,id);state.goals=lsRead("goals");renderGoals();renderDashboard();
+    };
+
+    /* =========================================================
+       19. NOTES
+       ========================================================= */
+    function renderNotes(){
+      const q=el("notesSearch").value.trim().toLowerCase();
+      let rows=[...state.notes].filter(n=>!q||`${n.title} ${n.content} ${subjectName(n.subjectId)}`.toLowerCase().includes(q));
+      rows.sort((a,b)=>Number(b.pinned)-Number(a.pinned)||new Date(b.updatedAt||b.createdAt)-new Date(a.updatedAt||a.createdAt));
+      el("notesList").innerHTML=rows.map(n=>`
+        <div class="card note-card">
+          ${n.pinned?`<span class="badge badge-pink pin">📌 Pinned</span>`:""}
+          <div class="section-title"><span>✎ ${escapeHTML(n.title)}</span></div>
+          <div class="muted tiny">${escapeHTML(subjectName(n.subjectId))}</div>
+          <div style="white-space:pre-wrap;font-size:12px;line-height:1.6;margin:10px 0">${escapeHTML(n.content||"")}</div>
+          <div class="page-actions">
+            <button class="btn btn-sm" onclick="Edu.pinNote('${n.id}')">${n.pinned?"Bỏ ghim":"Ghim"}</button>
+            <button class="btn btn-sm" onclick="Edu.edit('note','${n.id}')">Sửa</button>
+            <button class="btn btn-sm btn-danger" onclick="Edu.del('note','${n.id}')">Xóa</button>
+          </div>
+        </div>`).join("")||`<div class="empty" style="grid-column:1/-1">Không có ghi chú.</div>`;
+    }
+    $("#notesSearch").addEventListener("input",renderNotes);
+    Edu.pinNote=async id=>{const n=state.notes.find(x=>x.id===id);if(!n)return;n.pinned=!n.pinned;n.updatedAt=nowISO();await saveCollectionRow("notes",n,id);state.notes=lsRead("notes");renderNotes();};
+
+    /* =========================================================
+       20. STATS
+       ========================================================= */
+    function renderStats(){
+      const ts=taskStats(), totalStudy=state.studySessions.reduce((a,s)=>a+Number(s.minutes||0),0);
+      const todayStudy=state.studySessions.filter(s=>dateKey(s.startedAt)===dateKey(new Date())).reduce((a,s)=>a+Number(s.minutes||0),0);
+      const weekStart=mondayOf(new Date()), weekStudy=state.studySessions.filter(s=>new Date(s.startedAt)>=weekStart).reduce((a,s)=>a+Number(s.minutes||0),0);
+      el("statsCards").innerHTML=[
+        ["Task hoàn thành",`${ts.done}/${ts.total}`,`${ts.pct}%`],
+        ["Task quá hạn",ts.overdue,"cần xử lý"],
+        ["Focus hôm nay",fmtMinutes(todayStudy),"hôm nay"],
+        ["Focus tuần",fmtMinutes(weekStudy),`Tổng ${fmtMinutes(totalStudy)}`]
+      ].map(([a,b,c])=>`<div class="card"><div class="muted tiny">${a}</div><div class="value" style="font-size:23px">${b}</div><div class="muted tiny">${c}</div></div>`).join("");
+
+      const gradeData=state.subjects.map(s=>({name:s.name,val:subjectAverage(s.id)})).filter(x=>x.val>0).sort((a,b)=>b.val-a.val);
+      const maxG=Math.max(10,...gradeData.map(x=>x.val));
+      el("gradeBars").innerHTML=gradeData.map(x=>`<div class="bar-row"><span>${escapeHTML(x.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${x.val/maxG*100}%"></div></div><div class="bar-val">${x.val.toFixed(2)}</div></div>`).join("")||`<div class="empty">Chưa có điểm.</div>`;
+
+      const studyMap={}; state.studySessions.forEach(s=>studyMap[s.subjectId]=(studyMap[s.subjectId]||0)+Number(s.minutes||0));
+      const studyData=Object.entries(studyMap).map(([id,val])=>({name:subjectName(id),val})).sort((a,b)=>b.val-a.val);
+      const maxS=Math.max(1,...studyData.map(x=>x.val));
+      el("studyBars").innerHTML=studyData.map(x=>`<div class="bar-row"><span>${escapeHTML(x.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${x.val/maxS*100}%"></div></div><div class="bar-val">${fmtMinutes(x.val)}</div></div>`).join("")||`<div class="empty">Chưa có phiên học.</div>`;
+    }
+
+    /* =========================================================
+       21. NOTIFICATIONS
+       ========================================================= */
+    async function checkNotifications(){
+      if(state.profile.notificationsEnabled===false)return;
+      const now=new Date();
+      const lead=Math.max(1,Number(state.profile.reminderMinutes)||60)*60000;
+      const generated=[];
+      state.tasks.filter(t=>t.status!=="Hoàn thành"&&t.deadline).forEach(t=>{
+        const diff=new Date(t.deadline)-now;
+        if(diff>0&&diff<=lead) generated.push({kind:"task",title:`Deadline sắp tới: ${t.title}`,body:`${subjectName(t.subjectId)} · ${fmtDateTime(t.deadline)}`});
+        if(diff<0&&diff>=-86400000) generated.push({kind:"task",title:`Bài tập quá hạn: ${t.title}`,body:subjectName(t.subjectId)});
+      });
+      state.exams.filter(e=>e.datetime).forEach(e=>{
+        const diff=new Date(e.datetime)-now;
+        if(diff>0&&diff<=lead) generated.push({kind:"exam",title:`Kiểm tra sắp tới: ${e.title}`,body:`${subjectName(e.subjectId)} · ${fmtDateTime(e.datetime)}`});
+      });
+      for(const n of generated){
+        if(!state.notifications.some(x=>x.title===n.title && new Date(x.createdAt)>addDays(now,-1))){
+          await saveCollectionRow("notifications",{...n,read:false,createdAt:nowISO()});
+        }
+      }
+      state.notifications=lsRead("notifications");
+      renderNotifications();
+    }
+    function renderNotifications(){
+      const unread=state.notifications.filter(n=>!n.read);
+      el("notifDot").style.display=unread.length?"block":"none";
+      el("notifList").innerHTML=[...state.notifications].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,20).map(n=>`
+        <div class="item" style="${n.read?"opacity:.65":""}">
+          <div class="item-main"><div class="item-title">${escapeHTML(n.title)}</div><div class="item-sub">${escapeHTML(n.body||"")} · ${fmtDateTime(n.createdAt)}</div></div>
+        </div>`).join("")||`<div class="empty">Chưa có thông báo.</div>`;
+    }
+    $("#notifBtn").addEventListener("click",()=>el("notificationPop").classList.toggle("show"));
+    $("#markNotifsRead").addEventListener("click",async()=>{
+      for(const n of state.notifications.filter(x=>!x.read)){n.read=true;await saveCollectionRow("notifications",n,n.id);}
+      state.notifications=lsRead("notifications");renderNotifications();
+    });
+
+    /* =========================================================
+       22. GLOBAL SEARCH
+       ========================================================= */
+    function globalSearch(query){
+      const q=query.trim().toLowerCase(); if(!q)return;
+      const results=[];
+      state.tasks.forEach(t=>{if(`${t.title} ${t.description||""}`.toLowerCase().includes(q))results.push(["Bài tập",t.title,"tasks"]);});
+      state.notes.forEach(n=>{if(`${n.title} ${n.content||""}`.toLowerCase().includes(q))results.push(["Ghi chú",n.title,"notes"]);});
+      Object.entries(state.materialsBySubject).forEach(([sid,rows])=>rows.forEach(m=>{if(`${m.title} ${m.description||""}`.toLowerCase().includes(q))results.push(["Tài liệu",m.title,"documents"]);}));
+      openModal("Kết quả tìm kiếm",{kind:"custom",html:results.length?`<div class="list">${results.slice(0,30).map(r=>`<div class="item"><div class="item-main"><div class="item-title">${escapeHTML(r[1])}</div><div class="item-sub">${r[0]}</div></div><button class="btn btn-sm" data-search-jump="${r[2]}">Mở</button></div>`).join("")}</div>`:`<div class="empty">Không tìm thấy kết quả.</div>`},null);
+      $$("[data-search-jump]").forEach(b=>b.addEventListener("click",()=>{closeModal();navigate(b.dataset.searchJump)}));
+    }
+    $("#globalSearch").addEventListener("keydown",e=>{if(e.key==="Enter")globalSearch(e.target.value)});
+
+    /* =========================================================
+       23. MODAL FACTORY + FORMS
+       ========================================================= */
+    function openModal(title, config={}, editId=null){
+      state.modalMode=config.kind||"custom"; state.modalEditId=editId;
+      el("modalTitle").textContent=title;
+      let html=config.html||buildFormHTML(config.kind,config.preset||{});
+      el("modalBody").innerHTML=html;
+      el("modal").classList.add("show");
+      afterFormOpen(config.kind,config.preset||{});
+    }
+    function closeModal(){el("modal").classList.remove("show");state.modalMode="";state.modalEditId=null;}
+    el("modalClose").addEventListener("click",closeModal);
+    el("modalCancel").addEventListener("click",closeModal);
+    el("modal").addEventListener("click",e=>{if(e.target===el("modal"))closeModal();});
+
+    function buildFormHTML(kind,p={}) {
+      if(kind==="custom")return p.html||"";
+      if(kind==="subject") return `
+        <div class="form-grid">
+          <div class="field span-2"><label>Tên môn</label><input id="f_name" value="${escapeHTML(p.name||"")}" required></div>
+          <div class="field"><label>Màu</label><input id="f_color" type="color" value="${escapeHTML(p.color||"#EC4899")}" style="height:43px;padding:5px"></div>
+          <div class="field"><label>Ghi chú</label><input id="f_description" value="${escapeHTML(p.description||"")}"></div>
+        </div>`;
+      if(kind==="docSubject") return `
+        <div class="form-grid">
+          <div class="field span-2"><label>Tên môn tài liệu</label><input id="f_name" value="${escapeHTML(p.name||"")}" required></div>
+          <div class="field"><label>Màu</label><input id="f_color" type="color" value="${escapeHTML(p.color||"#EC4899")}" style="height:43px;padding:5px"></div>
+          <div class="field"><label>Mô tả</label><input id="f_description" value="${escapeHTML(p.description||"")}"></div>
+        </div>`;
+      if(kind==="task") return `
+        <div class="form-grid">
+          <div class="field span-2"><label>Tên bài tập</label><input id="f_title" value="${escapeHTML(p.title||"")}" required></div>
+          <div class="field"><label>Môn học</label><select id="taskSubject" required></select></div>
+          <div class="field"><label>Deadline</label><input id="f_deadline" type="datetime-local" value="${p.deadline?localDateTimeInputValue(new Date(p.deadline)):""}"></div>
+          <div class="field"><label>Ưu tiên</label><select id="f_priority"><option>Thấp</option><option>Trung bình</option><option>Cao</option></select></div>
+          <div class="field"><label>Trạng thái</label><select id="f_status"><option>Chưa làm</option><option>Đang làm</option><option>Hoàn thành</option></select></div>
+          <div class="field span-2"><label>Mô tả</label><textarea id="f_description">${escapeHTML(p.description||"")}</textarea></div>
+        </div>`;
+      if(kind==="schedule") return `
+        <div class="form-grid">
+          <div class="field"><label>Thứ</label><select id="f_day"><option value="1">Thứ 2</option><option value="2">Thứ 3</option><option value="3">Thứ 4</option><option value="4">Thứ 5</option><option value="5">Thứ 6</option><option value="6">Thứ 7</option><option value="0">Chủ nhật</option></select></div>
+          <div class="field"><label>Thời gian</label><input id="f_time" type="time" value="${escapeHTML(p.time||"07:00")}" required></div>
+          <div class="field"><label>Môn học</label><select id="scheduleSubject" required></select></div>
+          <div class="field"><label>Phòng</label><input id="f_room" value="${escapeHTML(p.room||"")}"></div>
+          <div class="field"><label>Giáo viên</label><input id="f_teacher" value="${escapeHTML(p.teacher||"")}"></div>
+          <div class="field"><label>Màu hiển thị</label><input id="f_color" type="color" value="${escapeHTML(p.color||"#EC4899")}" style="height:43px;padding:5px"></div>
+        </div>`;
+      if(kind==="exam") return `
+        <div class="form-grid">
+          <div class="field span-2"><label>Tên bài kiểm tra</label><input id="f_title" value="${escapeHTML(p.title||"")}" required></div>
+          <div class="field"><label>Môn học</label><select id="examSubject" required></select></div>
+          <div class="field"><label>Ngày / giờ</label><input id="f_datetime" type="datetime-local" value="${p.datetime?localDateTimeInputValue(new Date(p.datetime)):""}" required></div>
+          <div class="field"><label>Phân loại</label><select id="f_type"><option value="15 phút">15 phút</option><option value="Giữa kỳ">Giữa kỳ</option><option value="Cuối kỳ">Cuối kỳ</option><option value="Khác">Khác</option></select></div>
+          <div class="field span-2"><label>Phạm vi / nội dung ôn tập</label><textarea id="f_scope">${escapeHTML(p.scope||"")}</textarea></div>
+        </div>`;
+      if(kind==="grade") return `
+        <div class="form-grid">
+          <div class="field span-2"><label>Môn học</label><select id="gradeSubject" required></select></div>
+          <div class="field"><label>Loại điểm</label><select id="f_type"><option value="15p">15p</option><option value="Giữa kỳ">Giữa kỳ</option><option value="Cuối kỳ">Cuối kỳ</option></select></div>
+          <div class="field"><label>Học kỳ</label><select id="f_term"><option>HK1</option><option>HK2</option><option>Cả năm</option></select></div>
+          <div class="field"><label>Điểm</label><input id="f_score" type="number" min="0" max="10" step="0.01" value="${p.score??""}" required></div>
+          <div class="field"><label>Hệ số / trọng số</label><input id="f_weight" type="number" min="1" max="10" step="1" value="${p.weight||1}" required></div>
+        </div>`;
+      if(kind==="material") return `
+        <div class="form-grid">
+          <div class="field span-2"><label>Môn tài liệu</label><select id="materialSubject" required></select></div>
+          <div class="field span-2"><label>Tên tài liệu</label><input id="f_title" value="${escapeHTML(p.title||"")}" required></div>
+          <div class="field span-2"><label>Link PDF / Drive</label><input id="f_url" type="url" placeholder="https://..." value="${escapeHTML(p.url||"")}" required></div>
+          <div class="field span-2"><label>Mô tả</label><textarea id="f_description">${escapeHTML(p.description||"")}</textarea></div>
+        </div>`;
+      if(kind==="goal") return `
+        <div class="form-grid">
+          <div class="field span-2"><label>Tên mục tiêu</label><input id="f_title" value="${escapeHTML(p.title||"")}" required></div>
+          <div class="field"><label>Chu kỳ</label><select id="f_period"><option>Ngày</option><option>Tuần</option><option>Tháng</option></select></div>
+          <div class="field"><label>Tiến độ (%)</label><input id="f_progress" type="number" min="0" max="100" value="${Number(p.progress)||0}"></div>
+          <div class="field span-2"><label>Mô tả</label><textarea id="f_description">${escapeHTML(p.description||"")}</textarea></div>
+        </div>`;
+      if(kind==="note") return `
+        <div class="form-grid">
+          <div class="field span-2"><label>Tiêu đề</label><input id="f_title" value="${escapeHTML(p.title||"")}" required></div>
+          <div class="field"><label>Môn học</label><select id="noteSubject"></select></div>
+          <div class="field"><label>Ghim</label><select id="f_pinned"><option value="false">Không</option><option value="true">Có</option></select></div>
+          <div class="field span-2"><label>Nội dung</label><textarea id="f_content" style="min-height:180px">${escapeHTML(p.content||"")}</textarea></div>
+        </div>`;
+      if(kind==="share") return `
+        <div class="form-grid">
+          <div class="field"><label>Loại dữ liệu</label><select id="shareType"><option value="note">Ghi chú</option><option value="material">Tài liệu</option></select></div>
+          <div class="field"><label>Quyền</label><select id="sharePermission"><option value="copy">Chỉ sao chép</option><option value="edit">Sao chép & chỉnh sửa sau khi nhận</option></select></div>
+          <div class="field span-2"><label>Chọn nội dung</label><select id="shareItem" required></select></div>
+        </div>`;
+      return `<div class="empty">Không có biểu mẫu.</div>`;
+    }
+
+    function afterFormOpen(kind,p){
+      populateSubjectSelectors();
+      const set=(id,val)=>{if(el(id)&&val!==undefined)el(id).value=val;};
+      if(kind==="task"){set("taskSubject",p.subjectId);set("f_priority",p.priority||"Trung bình");set("f_status",p.status||"Chưa làm");}
+      if(kind==="schedule"){set("scheduleSubject",p.subjectId);set("f_day",p.day ?? 1);}
+      if(kind==="exam"){set("examSubject",p.subjectId);set("f_type",p.type||"15 phút");}
+      if(kind==="grade"){set("gradeSubject",p.subjectId);set("f_type",p.type||"15p");set("f_term",p.term||"HK1");}
+      if(kind==="material"){
+        const node=el("materialSubject");
+        node.innerHTML=state.documentSubjects.map(s=>`<option value="${s.id}">${escapeHTML(s.name)}</option>`).join("");
+        set("materialSubject",p.subjectId);
+      }
+      if(kind==="goal"){set("f_period",p.period||"Ngày");}
+      if(kind==="note"){set("noteSubject",p.subjectId);set("f_pinned",String(!!p.pinned));}
+      if(kind==="share"){
+        const type=el("shareType"), item=el("shareItem");
+        const fill=()=>{
+          if(type.value==="note") item.innerHTML=state.notes.map(n=>`<option value="${n.id}">${escapeHTML(n.title)}</option>`).join("");
+          else{
+            const all=[];Object.entries(state.materialsBySubject).forEach(([sid,rows])=>rows.forEach(m=>all.push({...m,subjectName:subjectName(sid),sid})));
+            item.innerHTML=all.map(m=>`<option value="${m.sid}::${m.id}">${escapeHTML(m.title)} — ${escapeHTML(m.subjectName)}</option>`).join("");
+          }
+        };
+        type.addEventListener("change",fill);fill();
+      }
+    }
+
+    $("#modalForm").addEventListener("submit",async e=>{
+      e.preventDefault();
+      try{
+        const kind=state.modalMode, id=state.modalEditId;
+        if(kind==="subject"){
+          await saveCollectionRow("subjects",{name:el("f_name").value.trim(),description:el("f_description").value.trim(),color:el("f_color").value,createdAt:nowISO()},id);
+          state.subjects=lsRead("subjects");
+          closeModal();
+          populateSubjectSelectors();
+          renderAll();
+          toast(id?"Đã cập nhật môn.":"Đã tạo môn học.");
+        }
+        else if(kind==="docSubject"){
+          const old=state.documentSubjects.find(x=>x.id===id);
+          const row=await saveCollectionRow("documentSubjects",{name:el("f_name").value.trim(),description:el("f_description").value.trim(),color:el("f_color").value,createdAt:old?.createdAt||nowISO()},id);
+          state.documentSubjects=lsRead("documentSubjects");closeModal();await loadAllMaterials();renderAll();toast(id?"Đã cập nhật môn tài liệu.":"Đã tạo môn tài liệu.");
+        }
+        else if(kind==="task"){
+          const existing=state.tasks.find(x=>x.id===id);
+          const data={title:el("f_title").value.trim(),subjectId:el("taskSubject").value,deadline:el("f_deadline").value?new Date(el("f_deadline").value).toISOString():"",priority:el("f_priority").value,status:el("f_status").value,description:el("f_description").value.trim(),createdAt:existing?.createdAt||nowISO(),updatedAt:nowISO()};
+          await saveCollectionRow("tasks",data,id);state.tasks=lsRead("tasks");closeModal();renderAll();toast(id?"Đã sửa bài tập.":"Đã thêm bài tập.");
+        }
+        else if(kind==="schedule"){
+          const existing=state.schedule.find(x=>x.id===id);
+          await saveCollectionRow("schedule",{day:Number(el("f_day").value),time:el("f_time").value,subjectId:el("scheduleSubject").value,room:el("f_room").value.trim(),teacher:el("f_teacher").value.trim(),color:el("f_color").value,createdAt:existing?.createdAt||nowISO()},id);
+          state.schedule=lsRead("schedule");closeModal();renderAll();toast("Đã lưu lịch.");
+        }
+        else if(kind==="exam"){
+          const existing=state.exams.find(x=>x.id===id);
+          await saveCollectionRow("exams",{title:el("f_title").value.trim(),subjectId:el("examSubject").value,datetime:el("f_datetime").value?new Date(el("f_datetime").value).toISOString():"",type:el("f_type").value,scope:el("f_scope").value.trim(),createdAt:existing?.createdAt||nowISO()},id);
+          state.exams=lsRead("exams");closeModal();renderAll();toast("Đã lưu bài kiểm tra.");
+        }
+        else if(kind==="grade"){
+          const existing=state.grades.find(x=>x.id===id);
+          await saveCollectionRow("grades",{subjectId:el("gradeSubject").value,type:el("f_type").value,term:el("f_term").value,score:Number(el("f_score").value),weight:Number(el("f_weight").value)||1,createdAt:existing?.createdAt||nowISO()},id);
+          state.grades=lsRead("grades");closeModal();renderAll();toast("Đã lưu điểm.");
+        }
+        else if(kind==="material"){
+          const subjectId=el("materialSubject").value;
+          const existing=(state.materialsBySubject[subjectId]||[]).find(x=>x.id===id);
+          await saveMaterial(subjectId,{title:el("f_title").value.trim(),url:el("f_url").value.trim(),description:el("f_description").value.trim(),createdAt:existing?.createdAt||nowISO()},id);
+          closeModal();renderDocuments();toast("Đã lưu tài liệu trong đúng môn.");
+        }
+        else if(kind==="goal"){
+          const existing=state.goals.find(x=>x.id===id);
+          await saveCollectionRow("goals",{title:el("f_title").value.trim(),period:el("f_period").value,progress:Number(el("f_progress").value)||0,description:el("f_description").value.trim(),createdAt:existing?.createdAt||nowISO()},id);
+          state.goals=lsRead("goals");closeModal();renderAll();toast("Đã lưu mục tiêu.");
+        }
+        else if(kind==="note"){
+          const existing=state.notes.find(x=>x.id===id);
+          await saveCollectionRow("notes",{title:el("f_title").value.trim(),subjectId:el("noteSubject").value,content:el("f_content").value,pinned:el("f_pinned").value==="true",createdAt:existing?.createdAt||nowISO(),updatedAt:nowISO()},id);
+          state.notes=lsRead("notes");closeModal();renderAll();toast("Đã lưu ghi chú.");
+        }
+        else if(kind==="share"){
+          await createShare(el("shareType").value,el("shareItem").value,el("sharePermission").value);
+          closeModal();renderSettingsShares();toast("Đã tạo mã chia sẻ.");
+        }
+      }catch(err){
+        console.error(err);toast(err.message||"Có lỗi xảy ra.");
+      }
+    });
+
+    /* =========================================================
+       24. QUICK MODALS / CRUD
+       ========================================================= */
+    function getExisting(kind,id){
+      const map={subject:state.subjects,task:state.tasks,schedule:state.schedule,exam:state.exams,grade:state.grades,goal:state.goals,note:state.notes,docSubject:state.documentSubjects};
+      return (map[kind]||[]).find(x=>x.id===id)||{};
+    }
+    $$(".btn[data-quick-modal], [data-quick-modal]").forEach(b=>b.addEventListener("click",()=> {
+      const kind=b.dataset.quickModal;
+      const title={task:"Thêm bài tập",schedule:"Thêm lịch học",exam:"Thêm bài kiểm tra",grade:"Thêm điểm",material:"Thêm tài liệu",docSubject:"Tạo môn tài liệu",goal:"Thêm mục tiêu",note:"Thêm ghi chú",share:"Tạo mã chia sẻ"}[kind]||"Thêm";
+      openModal(title,{kind,preset:{}},null);
+    }));
+    $("#quickAddBtn").addEventListener("click",()=>{
+      openModal("Thêm nhanh",{kind:"custom",html:`<div class="list">
+        <button class="btn btn-primary" data-quick-inner="task">✓ Bài tập</button>
+        <button class="btn" data-quick-inner="exam">⌁ Kiểm tra</button>
+        <button class="btn" data-quick-inner="schedule">◫ Lịch học</button>
+        <button class="btn" data-quick-inner="grade">◈ Điểm</button>
+        <button class="btn" data-quick-inner="note">✎ Ghi chú</button>
+        <button class="btn" data-quick-inner="goal">◎ Mục tiêu</button>
+      </div>`},null);
+      $$("[data-quick-inner]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.quickInner;closeModal();setTimeout(()=>openModal("Thêm",{kind:k,preset:{}}),80)}));
+    });
+
+    Edu.edit=(kind,id)=>{
+      const item=getExisting(kind,id);
+      const titles={subject:"Sửa môn",schedule:"Sửa lịch học",task:"Sửa bài tập",exam:"Sửa bài kiểm tra",grade:"Sửa điểm",goal:"Sửa mục tiêu",note:"Sửa ghi chú",docSubject:"Sửa môn tài liệu"};
+      openModal(titles[kind]||"Sửa",{kind,preset:item},id);
+    };
+    Edu.del=async(kind,id)=>{
+      if(!confirm("Xóa mục này?"))return;
+      if(kind==="subject"){
+        const refs=[
+          ...state.tasks.filter(x=>x.subjectId===id),
+          ...state.schedule.filter(x=>x.subjectId===id),
+          ...state.exams.filter(x=>x.subjectId===id),
+          ...state.grades.filter(x=>x.subjectId===id),
+          ...state.notes.filter(x=>x.subjectId===id)
+        ];
+        if(refs.length && !confirm("Môn này đang được dùng bởi dữ liệu khác. Vẫn xóa môn?")) return;
+        await deleteCollectionRow("subjects",id);
+        state.subjects=lsRead("subjects");
+        populateSubjectSelectors();
+        renderAll();
+        toast("Đã xóa môn học.");
+        return;
+      }
+      if(kind==="docSubject"){
+        const mats=state.materialsBySubject[id]||[];
+        for(const m of mats) await deleteMaterial(id,m.id);
+      }
+      const collectionMap={schedule:"schedule",task:"tasks",exam:"exams",grade:"grades",goal:"goals",note:"notes",docSubject:"documentSubjects"};
+      const collection=collectionMap[kind]||kind;
+      await deleteCollectionRow(collection,id);
+      if(collection==="documentSubjects") state.documentSubjects=lsRead("documentSubjects");
+      else state[kind]=lsRead(collection);
+      if(kind==="docSubject")await loadAllMaterials();
+      renderAll();toast("Đã xóa.");
+    };
+
+    /* =========================================================
+       25. SHARING
+       Root collection: shares/{code}; only owner can mutate, public read is
+       intentional because a share code is the public capability itself.
+       ========================================================= */
+    function getSharePayload(type,itemKey){
+      if(type==="note"){
+        const n=state.notes.find(x=>x.id===itemKey); return n?{type,source:{title:n.title,content:n.content||"",subjectId:n.subjectId||"",createdAt:n.createdAt||nowISO()},subjectName:subjectName(n.subjectId)}:null;
+      }
+      const [sid,mid]=(itemKey||"::").split("::"); const m=(state.materialsBySubject[sid]||[]).find(x=>x.id===mid);
+      return m?{type,source:{title:m.title,url:normalizeHttpUrl(m.url),description:m.description||"",subjectId:sid},subjectName:subjectName(sid)}:null;
+    }
+    async function createShare(type,itemKey,permission){
+      const payload=getSharePayload(type,itemKey); if(!payload)throw new Error("Không tìm thấy dữ liệu để chia sẻ.");
+      if(type==="material" && !payload.source.url)throw new Error("URL tài liệu không hợp lệ.");
+      let code="", attempts=0;
+      do{ code=randomCode(); attempts++; if(attempts>6)throw new Error("Không thể tạo mã chia sẻ lúc này."); }while(state.shares.some(s=>s.code===code));
+      const share={code,uid:uid(),type,permission,payload,createdAt:nowISO()}; state.shares.unshift(share); lsWrite("shares",state.shares);
+      if(syncAvailable()){
+        try{const ref=db.collection("shares").doc(code), snap=await ref.get(); if(snap.exists)throw new Error("Mã chia sẻ bị trùng, thử lại."); await ref.set(share); markSyncMode("firebase");}
+        catch(err){logFirebaseError("share-write",err);markSyncMode("local");throw new Error("Không thể đồng bộ mã chia sẻ với Firebase. Mã chỉ được lưu cục bộ.");}
+      }else markSyncMode("local");
+      return share;
+    }
+    function renderSettingsShares(){
+      el("myShares").innerHTML=state.shares.length?state.shares.map(s=>`<div class="item"><div class="item-main"><div class="item-title">${escapeHTML(s.code)} · ${escapeHTML(s.type||"share")}</div><div class="item-sub">${fmtDateTime(s.createdAt)} · ${escapeHTML(s.permission||"copy")}</div></div><button class="btn btn-sm" data-copy-share="${escapeHTML(s.code)}">Copy</button></div>`).join(""):`<div class="empty">Chưa có mã chia sẻ.</div>`;
+    }
+    async function importShare(){
+      const code=String(el("importShareCode").value||"").trim().toUpperCase(); if(!code)return;
+      let share=state.shares.find(s=>s.code===code);
+      if(!share && syncAvailable()){
+        try{const snap=await db.collection("shares").doc(code).get();if(snap.exists)share={id:snap.id,...snap.data()};}
+        catch(err){logFirebaseError("share-read",err);}
+      }
+      if(!share)return toast("Không tìm thấy người chia sẻ / mã chia sẻ.");
+      try{
+        if(share.type==="note"){
+          const src=share.payload?.source||{};
+          await saveCollectionRow("notes",{title:`${String(src.title||"Ghi chú")} (shared)`,subjectId:"",content:String(src.content||""),pinned:false,createdAt:nowISO(),updatedAt:nowISO()});
+          state.notes=lsRead("notes");
+        }else{
+          const src=share.payload?.source||{}, name=String(share.payload?.subjectName||"Shared");
+          let subject=state.documentSubjects.find(x=>String(x.name).toLowerCase()===name.toLowerCase());
+          if(!subject){subject=await saveCollectionRow("documentSubjects",{name,description:"Môn được tạo khi nhập tài liệu chia sẻ.",color:"#8B5CF6",createdAt:nowISO()});state.documentSubjects=lsRead("documentSubjects");}
+          const safeUrl=normalizeHttpUrl(src.url); if(!safeUrl)throw new Error("URL tài liệu chia sẻ không hợp lệ.");
+          await saveMaterial(subject.id,{title:`${String(src.title||"Tài liệu")} (shared)`,url:safeUrl,description:String(src.description||""),createdAt:nowISO()},null);
+        }
+        await loadAllMaterials(); renderAll(); toast(state.social.syncMode==="firebase"?"Đã nhập nội dung chia sẻ.":"Đã nhập nội dung vào LocalStorage (chưa đồng bộ Firebase).");
+      }catch(err){toast(err.message||"Không thể nhập mã chia sẻ.");}
+    }
+
+    /* =========================================================
+       26. SETTINGS / DATA RESET
+       ========================================================= */
+    el("deleteAllBtn").addEventListener("click",async()=>{
+      if(!confirm("Chắc chắn xóa TOÀN BỘ dữ liệu của tài khoản hiện tại? Hành động này không thể hoàn tác."))return;
+      await deleteAllUserData(); await loadAllData(); renderAll(); toast("Đã dọn dữ liệu tài khoản.");
+    });
+    el("importShareBtn").addEventListener("click",importShare);
+    document.addEventListener("click",async e=>{
+      const copy=e.target.closest("[data-copy-share]"); if(copy){const code=copy.dataset.copyShare; try{await navigator.clipboard?.writeText(code);toast("Đã copy mã chia sẻ.");}catch(_){toast(`Mã: ${code}`);} }
+    });
+
+    /* =========================================================
+       27. ACTIONS / STARTUP
+       ========================================================= */
+    function detectInstallMode(){
+      const standalone=window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+      document.body.dataset.apkmode=standalone?"1":"0";
+    }
+    detectInstallMode(); setConnectionBadge(); switchAuth("login"); initSocialUI();
+
+    // Global search is committed with Enter; notification pop closes on outside click.
+    document.addEventListener("click",e=>{
+      if(!e.target.closest("#notificationPop")&&!e.target.closest("#notifBtn"))el("notificationPop").classList.remove("show");
+    });
+
+    // Refresh notifications periodically.
+    setInterval(()=>{ if(state.user) checkNotifications(); }, 60000);
+
+    /* =========================================================
+       28. INITIAL STATE / EVENT BRIDGE
+       ========================================================= */
+    // If Firebase is configured, auth.onAuthStateChanged controls entry.
+    // Offline-only build: local login is intentionally lightweight because
+    // there is no server-side identity provider; replace with Firebase config
+    // when using real Email/Password accounts.
+    updateTimerUI();
+  })();
+  </script>
+</body>
+</html>
